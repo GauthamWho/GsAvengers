@@ -28,7 +28,6 @@ namespace GsAvengers
 
         // ---- state ----
         readonly Link link;
-        readonly Control ui;            // to run things on the UI thread
         HookProc mouseProc, keyProc;    // kept alive so the GC can't collect them
         IntPtr mouseHook, keyHook;
         volatile bool remote;           // true while the cursor is on the Mac
@@ -45,9 +44,8 @@ namespace GsAvengers
 
         public Host(Link link, Control ui)
         {
-            this.link = link; this.ui = ui;
+            this.link = link;   // ui: kept in the signature; hooks already run on the UI thread
             q = new InputQueue(link);
-            goHome = () => GoLocal(-1);
             vs = SystemInformation.VirtualScreen;
             displayChanged = (o, e) => { vs = SystemInformation.VirtualScreen; };
         }
@@ -140,7 +138,7 @@ namespace GsAvengers
             {
                 if (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN) buttonsDown++;
                 else if ((msg == WM_LBUTTONUP || msg == WM_RBUTTONUP || msg == WM_MBUTTONUP) && buttonsDown > 0) buttonsDown--;
-                if (msg == WM_MOUSEMOVE && !injected && AtEdge(px, py) && buttonsDown == 0 && link.Trusted
+                if (msg == WM_MOUSEMOVE && !injected && AtEdge(px, py) && buttonsDown == 0 && link.Healthy
                     && unchecked(Environment.TickCount - cooldownEnd) >= 0)
                 {
                     GoRemote(new Point(px, py));
@@ -150,6 +148,8 @@ namespace GsAvengers
             }
 
             if (injected) return CallNextHookEx(mouseHook, code, w, l);
+            // safety: never keep swallowing input for a Mac that has gone quiet or away
+            if (!link.Healthy) { GoLocal(-1); return CallNextHookEx(mouseHook, code, w, l); }
             switch (msg)
             {
                 case WM_MOUSEMOVE:
@@ -195,10 +195,14 @@ namespace GsAvengers
                 return CallNextHookEx(keyHook, code, w, l);
             }
 
-            // safety: Ctrl+Alt+Esc always brings the mouse home
+            // safety: never keep swallowing input for a Mac that has gone quiet or away
+            if (!link.Healthy) { GoLocal(-1); return CallNextHookEx(keyHook, code, w, l); }
+
+            // safety: Ctrl+Alt+Esc always brings the mouse home. Done right here (hooks run on the UI thread),
+            // not posted anywhere, so nothing can lose it.
             if (down && vk == 0x1B && Held(0x11) && Held(0x12))
             {
-                ui.BeginInvoke(goHome);
+                GoLocal(-1);
                 return (IntPtr)1;
             }
 
@@ -207,7 +211,6 @@ namespace GsAvengers
             q.Put(Msg.Key, (int)vkCode, scan, 0, down, (flags & LLKHF_EXTENDED) != 0);
             return (IntPtr)1;
         }
-        Action goHome;
 
         bool Held(int vk)
         {

@@ -33,6 +33,7 @@ namespace GsAvengers
                 Console.WriteLine("moved; now pushing back right to leave");
                 for (int i = 0; i < 120; i++) { link.Send(Msg.Move, Link.I16x2(20, 0)); Thread.Sleep(8); }
             }
+            if (script == "health") Health(link);
             if (script == "clip") link.Send(Msg.ClipText, System.Text.Encoding.UTF8.GetBytes("hello from fake windows ✓"));
             if (script == "keys")
             {
@@ -83,6 +84,21 @@ namespace GsAvengers
             }
             Thread.Sleep(args.Length > 2 ? int.Parse(args[2]) : 3000);
             Console.WriteLine("done");
+        }
+
+        // "health": the Windows hooks give the input back as soon as Link.Healthy turns false. Freeze the Mac app
+        // (kill -STOP) while this runs: the socket stays open but pings stop; Healthy must turn false within ~3 s.
+        static void Health(Link link)
+        {
+            Console.WriteLine("HEALTHY " + link.Healthy + " (expect True)"); Console.Out.Flush();
+            var t0 = DateTime.UtcNow; bool seenFalse = false;
+            while ((DateTime.UtcNow - t0).TotalSeconds < 20)
+            {
+                if (!link.Healthy) { Console.WriteLine("UNHEALTHY after " + (int)(DateTime.UtcNow - t0).TotalMilliseconds + " ms"); seenFalse = true; break; }
+                Thread.Sleep(100);
+            }
+            if (!seenFalse) Console.WriteLine("STILL HEALTHY after 20 s");
+            Console.Out.Flush();
         }
 
         static void Key(Link link, int vk, bool down)

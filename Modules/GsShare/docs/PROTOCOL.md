@@ -42,3 +42,11 @@ Nothing but AUTH / PAIR_OK / NEED_PAIR / PING is accepted before both sides trus
   other mouse/keyboard event (no auto-repeat) as local input → TAKE_BACK. 0.3 s grace after ENTER.
 - On LEAVE, TAKE_BACK and link loss the Mac releases everything, restores the cursor (CursorGuard) and moves it ~12% off the shared edge.
 - All key translation happens on the Mac (`mac/Sources/KeyRules.swift`, tests `bash mac/test.sh`). Windows sends raw VKs.
+
+## Rules on the Windows side
+- The low-level hooks only send input to the Mac while the link is healthy: connected, trusted, and a frame heard from
+  the Mac within the last 3 s (the Mac pings every second). If not, the next mouse or key event brings the pointer home
+  and passes through to Windows, so a sleeping, frozen or vanished Mac can never hold Windows input.
+- Ctrl+Alt+Esc brings the pointer home directly inside the key hook (the hooks run on the UI thread), never via a posted message.
+- LEAVE, TAKE_BACK and link loss reach the UI thread through its SynchronizationContext, never through the main window's
+  handle (hiding the window can rebuild that handle and lose posted messages).

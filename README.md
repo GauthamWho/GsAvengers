@@ -108,6 +108,8 @@ Full guide: [WINDOWS-INSTALL.md](Modules/GsShare/WINDOWS-INSTALL.md).
 
 You pair only once. Next time they connect by themselves.
 
+**If the mouse ever seems stuck on the Mac:** press **Ctrl+Alt+Esc** on the Windows keyboard and it comes straight back. It also comes back by itself within about 3 seconds if the Mac stops answering (asleep, frozen or off the Wi-Fi). Closing the G's Avengers window on Windows only hides it in the tray; to quit, right-click the tray icon.
+
 ## Windows keyboard cheat sheet
 
 What each Windows key does on the Mac. Every row is a switch on the **Keyboard** page.

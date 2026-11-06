@@ -161,6 +161,7 @@ namespace GsAvengers
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("Uninstall…", null, (o, e) => Uninstall());
             menu.Items.Add("Quit", null, (o, e) => { reallyQuit = true; Close(); });
+            uiCtx = System.Threading.SynchronizationContext.Current;
             tray = new NotifyIcon { Icon = appIcon, Text = "G's Avengers", Visible = !PreviewMode, ContextMenuStrip = menu };
             tray.DoubleClick += (o, e) => ShowMe();
 
@@ -673,8 +674,12 @@ namespace GsAvengers
 
         // ---------- link ----------
 
-        void UI(Action a) { if (IsHandleCreated) BeginInvoke(a); }
-        void Later(Action a) { if (IsHandleCreated) BeginInvoke(a); }
+        // Posted through the UI thread's own context, never through this form's window handle: hiding the form
+        // can rebuild its handle, and a message posted to the old one is silently lost (that once left the mouse
+        // stuck on the Mac). The context's own window lives as long as the UI thread.
+        System.Threading.SynchronizationContext uiCtx;
+        void UI(Action a) { var c = uiCtx; if (c != null) c.Post(_ => a(), null); }
+        void Later(Action a) { UI(a); }
 
         void WireLink()
         {
@@ -811,9 +816,21 @@ namespace GsAvengers
             reallyQuit = true; Close();
         }
 
+        bool closeTipShown;
+
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (!reallyQuit && e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); ShowInTaskbar = false; return; }
+            if (!reallyQuit && e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true; Hide();   // no ShowInTaskbar change here: it rebuilds the window handle
+                if (!closeTipShown)
+                {
+                    closeTipShown = true;
+                    tray.ShowBalloonTip(5000, "G's Avengers is still running",
+                        "It keeps sharing from the tray. Right-click the tray icon to quit. Ctrl+Alt+Esc always brings the mouse back.", ToolTipIcon.Info);
+                }
+                return;
+            }
             anim.Stop();
             if (host != null) { host.GoLocal(-1); host.Uninstall(); }
             RemoveClipboardFormatListener(Handle);

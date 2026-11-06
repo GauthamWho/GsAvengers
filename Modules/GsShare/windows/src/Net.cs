@@ -116,6 +116,8 @@ namespace GsAvengers
         void Status(string s) { var l = OnStatus; if (l != null) l(s); }
 
         public bool Connected { get { return connected; } }
+        /// True while the Mac is trusted and has been heard from in the last 3 s (it pings every second).
+        public bool Healthy { get { return connected && Trusted && (DateTime.UtcNow - lastHeard).TotalMilliseconds < 3000; } }
 
         public void Start()
         {
