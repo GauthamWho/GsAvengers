@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" width="220" height="150" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>Step 4: Cross the edge</title>
+  <rect x="1" y="1" width="218" height="148" rx="18" fill="#FFFFFF" stroke="#E6E1F0" stroke-width="2"/>
+  <circle cx="34" cy="34" r="18" fill="#FF6B57"/>
+  <text x="34" y="41" text-anchor="middle" font-size="19" font-weight="800" fill="#FFFFFF">4</text>
+  <g transform="translate(150 34)"><path d="M-26 0 h44" stroke="#FF6B57" stroke-width="3.5" stroke-linecap="round"/><path d="M12 -8 l10 8 l-10 8" fill="none" stroke="#FF6B57" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M-30 -14 v28" stroke="#1B2440" stroke-width="3" stroke-linecap="round"/></g>
+  <text x="18" y="96" font-size="17" font-weight="700" fill="#1B2440">Cross the edge</text>
+  <text x="18" y="120" font-size="12.5" fill="#5B6478">The pointer moves onto the Mac</text>
+</svg>

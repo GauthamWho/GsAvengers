@@ -165,7 +165,7 @@ enum AppUpdateRulesContract {
         suite.expect(service.rules == kept, "a picked bundle without an identifier adds no rule")
         service.addExclusion(appAt: bundle("Empty", ["CFBundleIdentifier": ""]))
         suite.expect(service.rules == kept, "a picked bundle with an empty identifier adds no rule")
-        service.addExclusion(appAt: bundle("Vorssaint", ["CFBundleIdentifier": "com.vorssaint.utils"]))
+        service.addExclusion(appAt: bundle("Vorssaint", ["CFBundleIdentifier": "com.gauthamwho.gsmac"]))
         suite.expect(service.rules == kept, "Vorssaint's own bundles never become exclusions")
         service.addExclusion(appAt: bundle("Spaced", ["CFBundleIdentifier": "com.example two"]))
         suite.expect(service.rules == kept, "a picked identifier with whitespace that a reload would drop adds no rule")
@@ -191,9 +191,8 @@ enum AppUpdateRulesContract {
     private static func listControls(_ suite: TestSuite) {
         let source = (try? String(contentsOfFile: "Sources/Vorssaint/UI/AppUpdates/AppUpdatesListView.swift",
                                   encoding: .utf8)) ?? ""
-        suite.expect(source.contains("guard !inNotch else {")
-                     && source.contains("guard panel.runAboveIsland() == .OK, let url = panel.url else { return }"),
-                     "inside the island the app picker opens above it instead of below it")
+        suite.expect(source.contains("guard panel.runModal() == .OK, let url = panel.url else { return }"),
+                     "the app picker runs as its own dialog")
         suite.expect(source.contains(".help(moreOptions)")
                      && source.contains(".accessibilityLabel(\"\\(moreOptions): \\(item.name)\")")
                      && !source.contains(".help(text.excludeApp)"),

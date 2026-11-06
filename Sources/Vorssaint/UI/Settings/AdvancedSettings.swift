@@ -147,8 +147,7 @@ struct AdvancedSettings: View {
                 }
             }
         } message: {
-            Text(SettingsBackupSupport.omitsDynamicIslandSettings(pendingImport ?? [:])
-                 ? backup.importMissingIslandBody : backup.importConfirmBody)
+            Text(backup.importConfirmBody)
         }
     }
 }

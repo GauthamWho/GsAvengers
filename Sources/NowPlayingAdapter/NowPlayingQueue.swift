@@ -7,7 +7,7 @@ import ObjectiveC
 
 /// The queue stays inside the existing isolated adapter. No request, timer or
 /// retained player object survives closing the queue surface.
-enum NotchNativeQueue {
+enum NativeQueue {
     private static let work = DispatchQueue(label: "com.vorssaint.now-playing-queue")
     private static let callbacks = DispatchQueue(label: "com.vorssaint.now-playing-queue-callbacks")
     private static let covers = DispatchQueue(label: "com.vorssaint.now-playing-queue-covers")
@@ -29,7 +29,7 @@ enum NotchNativeQueue {
         let item: String
     }
     private struct Snapshot {
-        let target: NotchNativePlayback.Target
+        let target: NativePlayback.Target
         let identity: Identity
         let items: [[String: Any]]
         let canPlay: Bool
@@ -132,7 +132,7 @@ enum NotchNativeQueue {
         }
     }
 
-    static func play(_ selected: NotchQueueSelection) {
+    static func play(_ selected: QueueSelection) {
         work.async {
             let request = selected.requestID
             let identifier = selected.itemIdentifier
@@ -142,13 +142,13 @@ enum NotchNativeQueue {
                   let offset = current["offset"] as? Int,
                   selected.matches(pid: fresh.identity.pid, currentIdentifier: fresh.identity.item,
                                    itemIdentifier: identifier, offset: offset),
-                  let offsetKey = NotchNativePlayback.stringConstant("kMRMediaRemoteOptionPlaybackQueueOffset"),
-                  let itemKey = NotchNativePlayback.stringConstant("kMRMediaRemoteOptionContentItemID"), isCurrent(request) else {
+                  let offsetKey = NativePlayback.stringConstant("kMRMediaRemoteOptionPlaybackQueueOffset"),
+                  let itemKey = NativePlayback.stringConstant("kMRMediaRemoteOptionContentItemID"), isCurrent(request) else {
                 emit(["queueAction": request.uuidString, "queueActionOK": false])
                 return
             }
-            guard NotchNativePlayback.target?.pid == fresh.target.pid,
-                  NotchNativePlayback.send(131, options: [offsetKey: offset, itemKey: identifier] as CFDictionary, to: fresh.target) else {
+            guard NativePlayback.target?.pid == fresh.target.pid,
+                  NativePlayback.send(131, options: [offsetKey: offset, itemKey: identifier] as CFDictionary, to: fresh.target) else {
                 emit(["queueAction": request.uuidString, "queueActionOK": false])
                 return
             }
@@ -175,13 +175,13 @@ enum NotchNativeQueue {
         }
     }
 
-    private static func currentIdentity(target: NotchNativePlayback.Target? = NotchNativePlayback.target) -> Identity? {
+    private static func currentIdentity(target: NativePlayback.Target? = NativePlayback.target) -> Identity? {
         guard let target, target.isRunning else { return nil }
         let group = DispatchGroup()
         let lock = NSLock()
         var item: String?
         group.enter()
-        NotchNativePlayback.readInfo(target, artwork: false, queue: callbacks) { value in
+        NativePlayback.readInfo(target, artwork: false, queue: callbacks) { value in
             lock.lock()
             item = value?["kMRMediaRemoteNowPlayingInfoContentItemIdentifier"] as? String
             lock.unlock()
@@ -190,20 +190,20 @@ enum NotchNativeQueue {
         guard group.wait(timeout: .now() + 1) == .success else { return nil }
         lock.lock()
         defer { lock.unlock() }
-        guard let item, NotchPlaybackCommand.validIdentifier(item) else { return nil }
+        guard let item, PlaybackCommand.validIdentifier(item) else { return nil }
         return Identity(pid: target.pid, item: item)
     }
 
     private static func readSnapshot(covers: Bool) -> Snapshot? {
         typealias Create = @convention(c) (AnyObject, Selector, NSRange) -> Unmanaged<AnyObject>?
         typealias Read = @convention(c) (AnyObject, AnyObject, DispatchQueue, @escaping @convention(block) (AnyObject?, NSError?) -> Void) -> Void
-        guard let target = NotchNativePlayback.target, let before = currentIdentity(target: target),
+        guard let target = NativePlayback.target, let before = currentIdentity(target: target),
               let read = function(handle, "MRMediaRemoteRequestNowPlayingPlaybackQueueForPlayerSync", as: Read.self),
               let factory = NSClassFromString("MRPlaybackQueueRequest"),
               let method = class_getClassMethod(factory, NSSelectorFromString("defaultPlaybackQueueRequestWithRange:")),
               let encoding = method_getTypeEncoding(method), String(cString: encoding).contains("{_NSRange=QQ}"),
               let request = unsafeBitCast(method_getImplementation(method), to: Create.self)(
-                factory, NSSelectorFromString("defaultPlaybackQueueRequestWithRange:"), NSRange(location: 0, length: NotchQueueSelection.maximumItems + 1))?
+                factory, NSSelectorFromString("defaultPlaybackQueueRequestWithRange:"), NSRange(location: 0, length: QueueSelection.maximumItems + 1))?
                 .takeUnretainedValue() as? NSObject,
               setFlag(request, "setIncludeMetadata:"), setFlag(request, "setIncludeInfo:"),
               !covers || setDimension(request, "setArtworkWidth:", Double(coverPixels))
@@ -223,12 +223,12 @@ enum NotchNativeQueue {
         let answer = received
         lock.unlock()
         guard let answer, let items = object(answer, "contentItems") as? [NSObject],
-              !items.isEmpty, items.count <= NotchQueueSelection.maximumItems + 1,
+              !items.isEmpty, items.count <= QueueSelection.maximumItems + 1,
               object(items[0], "identifier") as? String == before.item,
-              currentIdentity(target: target) == before, NotchNativePlayback.target?.pid == target.pid else { return nil }
+              currentIdentity(target: target) == before, NativePlayback.target?.pid == target.pid else { return nil }
         var rows: [[String: Any]] = []
         for (offset, item) in items.enumerated().dropFirst() {
-            guard let identifier = object(item, "identifier") as? String, NotchPlaybackCommand.validIdentifier(identifier),
+            guard let identifier = object(item, "identifier") as? String, PlaybackCommand.validIdentifier(identifier),
                   let metadata = object(item, "metadata") as? NSObject,
                   let title = object(metadata, "title") as? String, !title.isEmpty else { continue }
             // Retain the native offset when an incomplete entry is omitted.
@@ -245,13 +245,13 @@ enum NotchNativeQueue {
         let playsFromQueue = supportsPlayItem(target: target)
         guard items.count > 1 || playsFromQueue != false else { return nil }
         let canPlay = target.allowsDirectCommands && target.itemIdentifier != nil && playsFromQueue == true
-        guard currentIdentity(target: target) == before, NotchNativePlayback.target?.pid == target.pid else { return nil }
+        guard currentIdentity(target: target) == before, NativePlayback.target?.pid == target.pid else { return nil }
         return Snapshot(target: target, identity: before, items: rows, canPlay: canPlay,
                         currentCover: covers ? cover(of: items[0]) : nil)
     }
 
     /// Nil when the player's commands could not be read in time.
-    private static func supportsPlayItem(target: NotchNativePlayback.Target) -> Bool? {
+    private static func supportsPlayItem(target: NativePlayback.Target) -> Bool? {
         typealias ID = @convention(c) (AnyObject) -> Int32
         typealias Enabled = @convention(c) (AnyObject) -> Bool
         guard let id = function(handle, "MRMediaRemoteCommandInfoGetCommand", as: ID.self),
@@ -260,7 +260,7 @@ enum NotchNativeQueue {
         let lock = NSLock()
         var supported: Bool?
         group.enter()
-        NotchNativePlayback.supportedCommands(target, queue: callbacks) { commands in
+        NativePlayback.supportedCommands(target, queue: callbacks) { commands in
             let value = commands?.contains(where: { id($0 as AnyObject) == 131 && enabled($0 as AnyObject) })
             lock.lock(); supported = value; lock.unlock(); group.leave()
         }

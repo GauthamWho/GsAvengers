@@ -211,7 +211,7 @@ struct ScreenshotCaptureSettings: View {
             Section {
                 Toggle(strings.shareEnabledToggle, isOn: $sharingEnabled)
                     .onChange(of: sharingEnabled) { _, _ in service.syncWithPreferences() }
-                if sharingEnabled {
+                if sharingEnabled && AppInfo.remoteServicesEnabled {
                     Toggle(strings.uploadLastCapture, isOn: $uploadShortcutEnabled)
                         .onChange(of: uploadShortcutEnabled) { _, _ in service.syncWithPreferences() }
                     ShortcutPreferenceRow(role: .screenshotUpload,

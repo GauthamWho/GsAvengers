@@ -21,7 +21,6 @@ final class CameraPreviewService: ObservableObject {
     @Published private(set) var state: PreviewState = .idle
     @Published private(set) var devices: [AVCaptureDevice] = []
     @Published private(set) var selectedDeviceID: String?
-    @Published private(set) var isEmbeddedPresented = false
     private var captureGeneration = UUID()
     private var sessionRequest: CameraPreviewRequest?
     private var sessionObservers: [NSObjectProtocol] = []
@@ -33,7 +32,7 @@ final class CameraPreviewService: ObservableObject {
     private let hotkey = QuickToolHotkey(id: 16)
     /// startRunning blocks for a moment, so every session mutation happens
     /// here and only state lands back on the main thread.
-    private let sessionQueue = DispatchQueue(label: "com.vorssaint.utils.camera-preview")
+    private let sessionQueue = DispatchQueue(label: "com.gauthamwho.gsmac.camera-preview")
     private var panel: NSPanel?
     private var keyMonitor: Any?
     private var localClickMonitor: Any?
@@ -57,11 +56,7 @@ final class CameraPreviewService: ObservableObject {
                                             fallback: .cameraPreviewDefault)
         shortcutRegistrationFailed = !hotkey.sync(enabled: enabled, shortcut: shortcut,
                                                   storageKey: DefaultsKey.cameraPreviewShortcut)
-        if !available {
-            hide()
-        } else if !NotchCameraSupport.isEnabled() {
-            hideEmbedded()
-        }
+        if !available { hide() }
     }
 
     func suspend() {
@@ -73,30 +68,7 @@ final class CameraPreviewService: ObservableObject {
         panel?.isVisible == true
     }
 
-    private var isPresented: Bool { isVisible || isEmbeddedPresented }
-
-    var keepsNotchPermissionPrompt: Bool {
-        isEmbeddedPresented && (state == .waitingPermission
-            || permissionResolvedAt.map { Date().timeIntervalSince($0) < 1 } == true)
-    }
-
-    /// The notch calls this only from its explicit camera button. Ownership
-    /// transfers from the floating mirror; the two never capture together.
-    func showEmbedded() {
-        let notch = NotchService.shared
-        guard SessionActivity.shared.isActive,
-            NotchCameraSupport.canPresent(expanded: notch.expanded, selected: notch.selected,
-            appPanel: notch.showingAppPanel, captureControls: notch.captureControls != nil),
-            !isEmbeddedPresented else { return }
-        hide()
-        isEmbeddedPresented = true
-        beginCapture()
-    }
-
-    func hideEmbedded() {
-        guard isEmbeddedPresented else { return }
-        hide()
-    }
+    private var isPresented: Bool { isVisible }
 
     func toggle() {
         if isPresented {
@@ -108,9 +80,7 @@ final class CameraPreviewService: ObservableObject {
 
     func show() {
         guard AppFeature.cameraPreview.isAvailable, SessionActivity.shared.isActive else { return }
-        if showInNotchIfEnabled() { return }
         guard !isVisible else { return }
-        hideEmbedded()
         let panel = ensurePanel()
         installMonitors(for: panel)
         position(panel)
@@ -124,20 +94,8 @@ final class CameraPreviewService: ObservableObject {
         beginCapture()
     }
 
-    @discardableResult
-    func showInNotchIfEnabled() -> Bool {
-        guard SessionActivity.shared.isActive, NotchCameraSupport.isEnabled() else { return false }
-        let notch = NotchService.shared
-        notch.open(.camera)
-        guard NotchCameraSupport.canPresent(expanded: notch.expanded, selected: notch.selected,
-            appPanel: notch.showingAppPanel, captureControls: notch.captureControls != nil) else { return false }
-        showEmbedded()
-        return isEmbeddedPresented
-    }
-
     func hide() {
         captureGeneration = UUID()
-        isEmbeddedPresented = false
         permissionResolvedAt = nil
         removeMonitors()
         removeDeviceObservers()
@@ -362,7 +320,7 @@ final class CameraPreviewService: ObservableObject {
                                         styleMask: [.borderless, .nonactivatingPanel],
                                         backing: .buffered,
                                         defer: false)
-        panel.title = "Vorssaint"
+        panel.title = "G’s Mac"
         panel.isReleasedWhenClosed = false
         // A mirror is something the user drags next to the meeting window.
         panel.isMovableByWindowBackground = true

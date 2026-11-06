@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" width="960" height="470" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>G's Avengers setup: a Windows laptop and a Mac on the same home Wi-Fi, paired with the same 6-digit code; the pointer crosses the shared screen edge</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF4EC"/><stop offset="1" stop-color="#EAF1FF"/></linearGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FF8A4C"/><stop offset="1" stop-color="#FF5E62"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#FF6B57"/></marker>
+    <marker id="arrowB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#2E7BFF"/></marker>
+  </defs>
+  <rect width="960" height="470" rx="24" fill="url(#bg)"/>
+
+  <!-- Wi-Fi router -->
+  <g transform="translate(480 70)">
+    <path d="M-34 -6 a48 48 0 0 1 68 0" fill="none" stroke="#2E7BFF" stroke-width="5" stroke-linecap="round"/>
+    <path d="M-22 6 a31 31 0 0 1 44 0" fill="none" stroke="#2E7BFF" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="0" cy="18" r="6" fill="#2E7BFF"/>
+    <text x="0" y="50" text-anchor="middle" font-size="17" font-weight="600" fill="#1B2440">Same home Wi-Fi</text>
+    <text x="0" y="71" text-anchor="middle" font-size="13" fill="#5B6478">finds each other by itself · no IP · no cloud</text>
+  </g>
+  <path d="M410 120 C 330 130, 280 150, 250 175" fill="none" stroke="#2E7BFF" stroke-width="2.5" stroke-dasharray="3 7" stroke-linecap="round" marker-end="url(#arrowB)"/>
+  <path d="M550 120 C 630 130, 680 150, 710 175" fill="none" stroke="#2E7BFF" stroke-width="2.5" stroke-dasharray="3 7" stroke-linecap="round" marker-end="url(#arrowB)"/>
+
+  <!-- Windows laptop -->
+  <g transform="translate(70 180)">
+    <rect x="0" y="0" width="330" height="200" rx="14" fill="#1B2440"/>
+    <rect x="10" y="10" width="310" height="180" rx="6" fill="#DCE8FF"/>
+    <g transform="translate(26 26)"><rect width="13" height="13" fill="#2E7BFF"/><rect x="15" width="13" height="13" fill="#2E7BFF"/><rect y="15" width="13" height="13" fill="#2E7BFF"/><rect x="15" y="15" width="13" height="13" fill="#2E7BFF"/></g>
+    <text x="64" y="47" font-size="16" font-weight="700" fill="#1B2440">Windows laptop</text>
+    <rect x="70" y="80" width="190" height="78" rx="12" fill="#FFFFFF" stroke="#FF8A4C" stroke-width="2"/>
+    <text x="165" y="104" text-anchor="middle" font-size="12" fill="#5B6478">Pair with this Mac?</text>
+    <text x="165" y="140" text-anchor="middle" font-size="30" font-weight="700" letter-spacing="5" fill="#1B2440">482 913</text>
+    <path d="M-20 200 h370 l-22 22 h-326 z" fill="#2B3555"/>
+    <text x="165" y="252" text-anchor="middle" font-size="14" fill="#1B2440">Its keyboard &amp; mouse drive both</text>
+  </g>
+
+  <!-- Mac -->
+  <g transform="translate(560 180)">
+    <rect x="0" y="0" width="330" height="200" rx="14" fill="#1B2440"/>
+    <rect x="10" y="10" width="310" height="180" rx="6" fill="#FFF1E6"/>
+    <rect x="143" y="10" width="44" height="9" rx="4" fill="#1B2440"/>
+    <text x="26" y="47" font-size="16" font-weight="700" fill="#1B2440">Mac</text>
+    <rect x="70" y="80" width="190" height="78" rx="12" fill="#FFFFFF" stroke="#FF8A4C" stroke-width="2"/>
+    <text x="165" y="104" text-anchor="middle" font-size="12" fill="#5B6478">Same number on both?</text>
+    <text x="165" y="140" text-anchor="middle" font-size="30" font-weight="700" letter-spacing="5" fill="#1B2440">482 913</text>
+    <path d="M-20 200 h370 l-22 22 h-326 z" fill="#2B3555"/>
+    <text x="165" y="252" text-anchor="middle" font-size="14" fill="#1B2440">G's Avengers in the menu bar</text>
+  </g>
+
+  <!-- edge crossing -->
+  <line x1="400" y1="200" x2="400" y2="360" stroke="#FF6B57" stroke-width="4" stroke-linecap="round"/>
+  <path d="M340 280 C 420 250, 500 250, 586 280" fill="none" stroke="#FF6B57" stroke-width="3.5" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <path d="M370 268 l12 26 l4 -11 l11 -3 z" fill="#FFFFFF" stroke="#1B2440" stroke-width="2" stroke-linejoin="round"/>
+  <rect x="407" y="300" width="146" height="44" rx="10" fill="#FFFFFF" stroke="#FF6B57" stroke-width="1.5"/>
+  <text x="480" y="318" text-anchor="middle" font-size="12.5" font-weight="700" fill="#E5533D">Move off this edge</text>
+  <text x="480" y="335" text-anchor="middle" font-size="12" fill="#5B6478">pointer lands on the Mac</text>
+
+  <!-- footer -->
+  <text x="480" y="440" text-anchor="middle" font-size="14" fill="#1B2440"><tspan font-weight="700">Encrypted link</tspan> (ECDH P-256 + AES-256 + HMAC) · touch the Mac trackpad to take the pointer back · clipboard both ways</text>
+</svg>

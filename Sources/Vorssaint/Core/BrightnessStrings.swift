@@ -40,9 +40,6 @@ struct BrightnessFeatureStrings {
     let keyboardBrightnessIncrease: String
     let softwareDimming: String
     let extendedDimming: String
-    let islandPromptTitle: String
-    let islandPromptMessage: String
-    let islandPromptKeepOff: String
 }
 
 extension FeatureStrings {
@@ -102,9 +99,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Increase keyboard brightness",
         softwareDimming: "Dim the picture",
         extendedDimming: "Extra dimming",
-        islandPromptTitle: "Show brightness in the Dynamic Island?",
-        islandPromptMessage: "The Dynamic Island shows brightness changes only while “Control displays” is on in Displays settings.",
-        islandPromptKeepOff: "Keep Off"
     )
 
     static let ptBR = BrightnessFeatureStrings(
@@ -141,9 +135,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Aumentar brilho do teclado",
         softwareDimming: "Escurecer a imagem",
         extendedDimming: "Escurecimento extra",
-        islandPromptTitle: "Mostrar o brilho na Dynamic Island?",
-        islandPromptMessage: "A Dynamic Island só mostra mudanças de brilho quando “Controlar telas” está ativado nos ajustes de Telas.",
-        islandPromptKeepOff: "Manter desativado"
     )
 
     static let tr = BrightnessFeatureStrings(
@@ -180,9 +171,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Klavye parlaklığını artır",
         softwareDimming: "Görüntüyü karart",
         extendedDimming: "Ek karartma",
-        islandPromptTitle: "Parlaklık Dynamic Island’da gösterilsin mi?",
-        islandPromptMessage: "Dynamic Island, parlaklık değişikliklerini yalnızca Ekranlar ayarlarında “Ekranları denetle” açıkken gösterir.",
-        islandPromptKeepOff: "Kapalı kalsın"
     )
 
     static let ru = BrightnessFeatureStrings(
@@ -219,9 +207,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Увеличить яркость клавиатуры",
         softwareDimming: "Затемнять изображение",
         extendedDimming: "Дополнительное затемнение",
-        islandPromptTitle: "Показывать яркость в Dynamic Island?",
-        islandPromptMessage: "Dynamic Island показывает изменения яркости, только когда в настройках «Экраны» включено «Управлять экранами».",
-        islandPromptKeepOff: "Оставить выключенным"
     )
 
     static let es = BrightnessFeatureStrings(
@@ -258,9 +243,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Aumentar el brillo del teclado",
         softwareDimming: "Oscurecer la imagen",
         extendedDimming: "Atenuación adicional",
-        islandPromptTitle: "¿Mostrar el brillo en el Dynamic Island?",
-        islandPromptMessage: "El Dynamic Island solo muestra los cambios de brillo cuando “Controlar las pantallas” está activado en los ajustes de Pantallas.",
-        islandPromptKeepOff: "Mantener desactivado"
     )
 
     static let sk = BrightnessFeatureStrings(
@@ -297,9 +279,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Zvýšiť jas klávesnice",
         softwareDimming: "Stmaviť obraz",
         extendedDimming: "Ďalšie stmievanie",
-        islandPromptTitle: "Zobrazovať jas v Dynamic Island?",
-        islandPromptMessage: "Dynamic Island zobrazuje zmeny jasu, len keď je v nastaveniach Displeje zapnuté „Ovládať displeje“.",
-        islandPromptKeepOff: "Nechať vypnuté"
     )
 
     static let de = BrightnessFeatureStrings(
@@ -336,9 +315,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Tastaturhelligkeit erhöhen",
         softwareDimming: "Bild abdunkeln",
         extendedDimming: "Zusätzliches Abdunkeln",
-        islandPromptTitle: "Helligkeit in der Dynamic Island anzeigen?",
-        islandPromptMessage: "Die Dynamic Island zeigt Helligkeitsänderungen nur, wenn „Displays steuern“ in den Displays-Einstellungen aktiviert ist.",
-        islandPromptKeepOff: "Aus lassen"
     )
 
     static let fr = BrightnessFeatureStrings(
@@ -375,9 +351,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Augmenter la luminosité du clavier",
         softwareDimming: "Assombrir l’image",
         extendedDimming: "Assombrissement supplémentaire",
-        islandPromptTitle: "Afficher la luminosité dans la Dynamic Island ?",
-        islandPromptMessage: "La Dynamic Island n’affiche les changements de luminosité que lorsque « Contrôler les écrans » est activé dans les réglages Écrans.",
-        islandPromptKeepOff: "Laisser désactivé"
     )
 
     static let it = BrightnessFeatureStrings(
@@ -414,9 +387,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Aumenta luminosità tastiera",
         softwareDimming: "Scurisci l’immagine",
         extendedDimming: "Oscuramento extra",
-        islandPromptTitle: "Mostrare la luminosità nella Dynamic Island?",
-        islandPromptMessage: "La Dynamic Island mostra le variazioni di luminosità solo quando “Controlla gli schermi” è attivo nelle impostazioni Schermi.",
-        islandPromptKeepOff: "Lascia disattivato"
     )
 
     static let ja = BrightnessFeatureStrings(
@@ -453,9 +423,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "キーボードの明るさを上げる",
         softwareDimming: "画面を暗くする",
         extendedDimming: "さらに暗くする",
-        islandPromptTitle: "Dynamic Islandに明るさを表示しますか？",
-        islandPromptMessage: "Dynamic Islandは、「ディスプレイ」設定で「ディスプレイを操作」がオンのときだけ明るさの変化を表示します。",
-        islandPromptKeepOff: "オフのままにする"
     )
 
     static let ko = BrightnessFeatureStrings(
@@ -492,9 +459,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "키보드 밝기 높이기",
         softwareDimming: "화면을 어둡게",
         extendedDimming: "추가 어둡게",
-        islandPromptTitle: "Dynamic Island에 밝기를 표시할까요?",
-        islandPromptMessage: "Dynamic Island는 디스플레이 설정에서 “디스플레이 제어”가 켜져 있을 때만 밝기 변화를 표시합니다.",
-        islandPromptKeepOff: "끈 상태로 유지"
     )
 
     static let zhHans = BrightnessFeatureStrings(
@@ -531,9 +495,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "提高键盘亮度",
         softwareDimming: "调暗画面",
         extendedDimming: "进一步调暗",
-        islandPromptTitle: "在Dynamic Island中显示亮度？",
-        islandPromptMessage: "只有在“显示器”设置中打开“控制显示器”时，Dynamic Island才会显示亮度变化。",
-        islandPromptKeepOff: "保持关闭"
     )
 
     static let zhTW = BrightnessFeatureStrings(
@@ -570,9 +531,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "提高鍵盤亮度",
         softwareDimming: "調暗畫面",
         extendedDimming: "進一步調暗",
-        islandPromptTitle: "要在Dynamic Island中顯示亮度嗎？",
-        islandPromptMessage: "只有在「顯示器」設定中開啟「控制顯示器」時，Dynamic Island才會顯示亮度變化。",
-        islandPromptKeepOff: "保持關閉"
     )
 
     static let zhHK = BrightnessFeatureStrings(
@@ -609,9 +567,6 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "提高鍵盤亮度",
         softwareDimming: "調暗畫面",
         extendedDimming: "進一步調暗",
-        islandPromptTitle: "要在Dynamic Island中顯示亮度嗎？",
-        islandPromptMessage: "只有在「顯示器」設定中開啟「控制顯示器」時，Dynamic Island才會顯示亮度變化。",
-        islandPromptKeepOff: "保持關閉"
     )
     static let uk = BrightnessFeatureStrings(
         pageTitle: "Дисплеї",
@@ -647,8 +602,5 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "Збільшити яскравість клавіатури",
         softwareDimming: "Затемнити зображення",
         extendedDimming: "Додаткове затемнення",
-        islandPromptTitle: "Показувати яскравість у Dynamic Island?",
-        islandPromptMessage: "Dynamic Island показує зміни яскравості, лише коли в налаштуваннях «Дисплеї» увімкнено «Керування дисплеями».",
-        islandPromptKeepOff: "Залишити вимкненим"
     )
 }

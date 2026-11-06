@@ -54,7 +54,6 @@ struct MediaWorkspaceView: View {
     @ObservedObject private var media: MediaService
     @ObservedObject private var featureRuntime = FeatureRuntime.shared
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.notchPresentation) private var inNotch
 
     @AppStorage(DefaultsKey.mediaLastTool) private var toolRaw = MediaTool.videoCompressor.rawValue
     @AppStorage(DefaultsKey.mediaVideoStart) private var videoStart = 0.0
@@ -306,13 +305,9 @@ struct MediaWorkspaceView: View {
         }
     }
 
-    @ViewBuilder private var inputDropTarget: some View {
-        if inNotch {
-            inputSelector
-        } else {
-            inputSelector.onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
-                acceptDrop(providers)
-            }
+    private var inputDropTarget: some View {
+        inputSelector.onDrop(of: [.fileURL], isTargeted: $isDropTargeted) { providers in
+            acceptDrop(providers)
         }
     }
 
@@ -1332,33 +1327,13 @@ struct MediaWorkspaceView: View {
     /// One dialog at a time: the modal now starts a run-loop turn after the
     /// click, so a double-click (or clicking both pickers quickly) would queue
     /// a second identical dialog behind the first without this guard.
-    /// While it is set, the island keeps its working surface open.
+    /// One save or open panel at a time.
     private(set) static var panelModalActive = false
 
     private static func runPanelModal(_ panel: NSSavePanel,
                                       completion: @escaping (NSApplication.ModalResponse) -> Void) {
         guard !panelModalActive else { return }
         panelModalActive = true
-        if let island = NotchService.shared.presentationWindow, island.isVisible,
-           NSApp.currentEvent?.window === island || NSApp.keyWindow === island {
-            // The island floats above the modal panel level, so an
-            // application-modal dialog would open behind it, and a sheet
-            // moves/reskins the borderless island. Open it on its own,
-            // just above the island.
-            panel.level = NSWindow.Level(rawValue: island.level.rawValue + 1)
-            // Like the sheet it replaces, it stays up while another app is active.
-            panel.hidesOnDeactivate = false
-            panel.begin { response in
-                panelModalActive = false
-                // Dismissal restores the previous key window after this callback.
-                DispatchQueue.main.async { if NotchService.shared.expanded { island.makeKey() } }
-                completion(response)
-            }
-            NSApp.activate(ignoringOtherApps: true)
-            // Activation alone can leave the nonactivating island holding focus.
-            panel.makeKeyAndOrderFront(nil)
-            return
-        }
         NSApp.activate(ignoringOtherApps: true)
         DispatchQueue.main.async {
             let response = panel.runModal()

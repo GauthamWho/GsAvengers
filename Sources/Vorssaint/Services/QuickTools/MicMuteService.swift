@@ -34,7 +34,7 @@ final class MicMuteService: ObservableObject {
     /// and that is exactly the moment the listeners fire. Sweeping every
     /// device on the main thread would hand the app one hang per reconnection,
     /// so all of it happens here, one sweep at a time.
-    private let halQueue = DispatchQueue(label: "com.vorssaint.utils.micmute.hal", qos: .userInitiated)
+    private let halQueue = DispatchQueue(label: "com.gauthamwho.gsmac.micmute.hal", qos: .userInitiated)
     /// A sweep that finished after a newer one started must not publish what
     /// it saw.
     private var applyGeneration = 0
@@ -259,20 +259,13 @@ final class MicMuteService: ObservableObject {
             inputVolumeLock.withLock { inputVolumeBlocked = isMuted }
         }
         guard announce else { return }
-        // Report a known failure even when no device could be changed. The
-        // whole sentence matters, and it is longer than the island's wings.
+        // Report a known failure even when no device could be changed.
         if outcome.failed {
-            NotchService.shared.retractMicrophoneNotice()
             QuickToolHUD.show(icon: "exclamationmark.triangle",
                               message: muted ? L10n.shared.s.micMutePartialHUD : L10n.shared.s.micUnmutePartialHUD)
             return
         }
         guard outcome.applied else { return }
-        // With Dynamic Island on, the switch reports there like the volume,
-        // and the companion hushes or perks up, in its notice or where it is.
-        let shownInIsland = NotchService.shared.showMicrophone(muted: muted)
-        NotchService.shared.reactMascot(muted ? .hush : .perk)
-        guard !shownInIsland else { return }
         QuickToolHUD.show(icon: muted ? "mic.slash.fill" : "mic.fill",
                           message: muted ? L10n.shared.s.micMutedHUD : L10n.shared.s.micUnmutedHUD)
     }

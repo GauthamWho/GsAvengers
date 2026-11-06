@@ -325,7 +325,7 @@ struct ScratchpadView: View {
     }
 
     private var formatBar: some View {
-        ScratchpadFormatBar(style: .pad)
+        ScratchpadFormatBar()
             .padding(.horizontal, 12)
             .frame(height: 30)
     }
@@ -575,7 +575,6 @@ private struct ScratchpadResizeOverlay: NSViewRepresentable {
 /// A selectable native preview. NSTextView keeps Markdown links interactive in
 /// the nonactivating scratchpad panel, where SwiftUI's Text link handling does
 /// not receive clicks reliably.
-/// Shared with the island's page, which shows the same formatted reading.
 struct MarkdownPreview: NSViewRepresentable {
     let blocks: [ScratchpadMarkdownBlock]
     var baseSize: CGFloat = PlainTextEditor.defaultFontSize
@@ -872,7 +871,7 @@ final class TaskBoxAttachment: NSTextAttachment {
 }
 
 /// The preview's text view: a click on a checkbox toggles its task, and the
-/// pointer over one becomes a hand, as over any button of the island.
+/// pointer over one becomes a hand, as over any button.
 final class TaskPreviewTextView: NSTextView {
     var onToggleTask: ((Int) -> Void)?
     private var pointerArea: NSTrackingArea?

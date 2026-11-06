@@ -19,9 +19,6 @@ enum BrightnessOSD {
             }
             return
         }
-        if NotchSupport.routes(.brightness), NotchService.shared.showBrightness(brightness) {
-            return
-        }
         // A display mirroring another has no screen of its own; the overlay
         // goes on the screen the mirror set shares, in hardware or software.
         let sharedScreenID = CGDisplayPrimaryDisplay(displayID)

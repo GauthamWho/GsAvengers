@@ -62,10 +62,6 @@ final class QuickLauncherService: ObservableObject {
     /// menu bar popover is never involved.
     @Published private(set) var activeUtility: QuickLauncherItem?
     @Published private(set) var selectedIndex: Int?
-    /// Where the keyboard moved the selection, which the island's rail
-    /// scrolls to. Hover clears it: centering a hovered tile slid the next
-    /// one under the pointer, and the rail kept scrolling by itself.
-    @Published private(set) var keyboardIndex: Int?
     @Published private(set) var presentationID = UUID()
     @Published private(set) var hiddenItemsRaw: String = UserDefaults.standard.string(
         forKey: DefaultsKey.quickLauncherHiddenItems) ?? ""
@@ -143,7 +139,6 @@ final class QuickLauncherService: ObservableObject {
     // MARK: - Presentation
 
     func toggle() {
-        if NotchService.shared.openQuickPanel(toggle: true) { return }
         if isVisible {
             hide()
         } else {
@@ -152,7 +147,6 @@ final class QuickLauncherService: ObservableObject {
     }
 
     func show() {
-        if NotchService.shared.openQuickPanel() { return }
         let panel = ensurePanel()
         prepareForPresentation()
         position(panel)
@@ -166,15 +160,13 @@ final class QuickLauncherService: ObservableObject {
         }
     }
 
-    /// Both destinations start with usable keyboard navigation. A utility that
-    /// is still installed keeps its working state when the island is reopened.
+    /// Every opening starts with usable keyboard navigation.
     func prepareForPresentation() {
         refreshAvailability()
         presentationID = UUID()
         isEditing = false
         editingOptionsItem = nil
         selectedIndex = visibleItems.isEmpty ? nil : 0
-        keyboardIndex = selectedIndex
     }
 
     func refreshAvailability() {
@@ -184,7 +176,6 @@ final class QuickLauncherService: ObservableObject {
     }
 
     func hide() {
-        if NotchService.shared.expanded, NotchService.shared.selected == .tools { NotchService.shared.collapse() }
         removeMonitors()
         isEditing = false
         editingOptionsItem = nil
@@ -200,9 +191,6 @@ final class QuickLauncherService: ObservableObject {
     /// (choosing a file in Media, for example), so Esc and the keyboard
     /// shortcuts keep working without an extra click.
     func refocusAfterModal() {
-        if NotchService.shared.expanded, NotchService.shared.selected == .tools {
-            NotchService.shared.presentationWindow?.makeKey(); return
-        }
         guard let panel, panel.isVisible else { return }
         panel.makeKey()
     }
@@ -258,14 +246,12 @@ final class QuickLauncherService: ObservableObject {
                                                     count: count,
                                                     flow: flow,
                                                     direction: direction)
-        keyboardIndex = selectedIndex
     }
 
     /// The pointer's selection. The hovered tile is already in view, so the
     /// rail stays where it is.
     func select(_ item: QuickLauncherItem) {
         selectedIndex = visibleItems.firstIndex(of: item)
-        keyboardIndex = nil
     }
 
     func run(_ item: QuickLauncherItem) {
@@ -296,12 +282,9 @@ final class QuickLauncherService: ObservableObject {
                 ColorSamplerService.shared.pick()
             }
         case .cameraPreview:
-            let embedded = CameraPreviewService.shared.showInNotchIfEnabled()
             hide()
-            if !embedded {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    CameraPreviewService.shared.show()
-                }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                CameraPreviewService.shared.show()
             }
         case .scratchpad:
             hide()
@@ -347,7 +330,7 @@ final class QuickLauncherService: ObservableObject {
                                          styleMask: [.borderless, .nonactivatingPanel],
                                          backing: .buffered,
                                          defer: false)
-        panel.title = "Vorssaint"
+        panel.title = "G’s Mac"
         panel.isReleasedWhenClosed = false
         // Item drag-to-reorder needs the mouse drag for itself; a background-
         // movable window would win the gesture and drag the whole panel.

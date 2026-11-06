@@ -57,8 +57,8 @@ func encodedReply(_ reply: [String: Any]) -> Data {
     return data
 }
 
-/// Where a song sampled `age` seconds ago is now, and the rate the island
-/// moves it at. A player can update its rate a step late or never, so its own
+/// Where a song sampled `age` seconds ago is now, and the rate it moves
+/// at. A player can update its rate a step late or never, so its own
 /// playing state, when known, wins over a rate that contradicts it. The song
 /// then holds still at the sample, or at `continuing`, where the last reply
 /// had it while the player kept the same sample. A playing song without a
@@ -105,15 +105,15 @@ public func vorssaintNowPlayingGet() {
         emit(["error": "MRMediaRemoteGetNowPlayingInfo unavailable"])
         return
     }
-    let selected = watching ? NotchNativePlayback.select() : nil
+    let selected = watching ? NativePlayback.select() : nil
     // No player may report a change while the chosen source waits for its
     // next track. Read again when that wait ends, so the release shows.
-    if watching, let release = NotchNativePlayback.pendingRelease { readAt?(release) }
+    if watching, let release = NativePlayback.pendingRelease { readAt?(release) }
     if watching, selected == nil {
-        NotchNativePlayback.publish(nil)
+        NativePlayback.publish(nil)
         previousArtwork = nil
-        emit(NotchNativePlayback.sourceReply.merging(["isPlaying": false]) { _, new in new })
-        NotchNativeQueue.observe([:])
+        emit(NativePlayback.sourceReply.merging(["isPlaying": false]) { _, new in new })
+        NativeQueue.observe([:])
         return
     }
     let queue = DispatchQueue(label: "com.vorssaint.now-playing-adapter")
@@ -161,11 +161,11 @@ public func vorssaintNowPlayingGet() {
     // the rate, so it gets its own short wait.
     let state = DispatchGroup()
     if let selected {
-        NotchNativePlayback.readInfo(selected, artwork: true, queue: queue, completion: receiveInfo)
+        NativePlayback.readInfo(selected, artwork: true, queue: queue, completion: receiveInfo)
         set("pid", selected.pid)
         set("displayID", selected.applicationBundleIdentifier ?? selected.bundleIdentifier)
         state.enter()
-        NotchNativePlayback.readPlaybackState(selected, queue: queue) { isPlaying in
+        NativePlayback.readPlaybackState(selected, queue: queue) { isPlaying in
             set("isPlaying", isPlaying)
             state.leave()
         }
@@ -205,7 +205,7 @@ public func vorssaintNowPlayingGet() {
        let commandID = function(handle, "MRMediaRemoteCommandInfoGetCommand", as: CommandID.self),
        let commandEnabled = function(handle, "MRMediaRemoteCommandInfoGetEnabled", as: CommandEnabled.self) {
         capabilities.enter()
-        NotchNativePlayback.supportedCommands(selected, queue: queue) { commands in
+        NativePlayback.supportedCommands(selected, queue: queue) { commands in
             func supports(_ command: Int32) -> Bool {
                 commands?.contains(where: {
                     commandID($0 as AnyObject) == command && commandEnabled($0 as AnyObject)
@@ -214,7 +214,7 @@ public func vorssaintNowPlayingGet() {
             if commands != nil {
                 set("canPlay", supports(0))
                 set("canPause", supports(1))
-                set("canSeek", NotchNativePlayback.stringConstant("kMRMediaRemoteOptionPlaybackPosition") != nil && supports(24))
+                set("canSeek", NativePlayback.stringConstant("kMRMediaRemoteOptionPlaybackPosition") != nil && supports(24))
                 set("canSkipNext", supports(4))
                 set("canSkipPrevious", supports(5))
             }
@@ -223,7 +223,7 @@ public func vorssaintNowPlayingGet() {
                 lock.lock()
                 let latest = reply
                 lock.unlock()
-                NotchNativePlayback.updatePlayPauseCommand(for: selected, info: latest)
+                NativePlayback.updatePlayPauseCommand(for: selected, info: latest)
             }
         }
     }
@@ -244,10 +244,10 @@ public func vorssaintNowPlayingGet() {
     let position = sample
     lock.unlock()
     var revision: UUID?
-    if watching, let context = NotchNativePlayback.publish(selected, info: snapshot) {
+    if watching, let context = NativePlayback.publish(selected, info: snapshot) {
         revision = context.revision
         snapshot["playbackRevision"] = context.revision.uuidString
-        snapshot["canSendCommandsDirectly"] = NotchNativePlayback.target.map {
+        snapshot["canSendCommandsDirectly"] = NativePlayback.target.map {
             $0.allowsDirectCommands && ($0.itemIdentifier != nil || $0.requiresCurrentPlayer)
         } == true
     }
@@ -257,18 +257,18 @@ public func vorssaintNowPlayingGet() {
         lock.lock()
         let latest = reply
         lock.unlock()
-        NotchNativePlayback.updatePlayPauseCommand(for: selected, info: latest)
+        NativePlayback.updatePlayPauseCommand(for: selected, info: latest)
     }
-    if watching { snapshot.merge(NotchNativePlayback.sourceReply) { _, new in new } }
+    if watching { snapshot.merge(NativePlayback.sourceReply) { _, new in new } }
     emit(snapshot)
-    if watching { NotchNativeQueue.observe(snapshot) }
+    if watching { NativeQueue.observe(snapshot) }
 }
 
 /// One adapter process while a music surface is subscribed. Native change
 /// notifications replace polling; closing stdin also ends it if the app exits.
 @_cdecl("vorssaint_now_playing_watch_all")
 public func vorssaintNowPlayingWatchAll() {
-    NotchNativePlayback.includeOtherPlayers = true
+    NativePlayback.includeOtherPlayers = true
     vorssaintNowPlayingWatch()
 }
 
@@ -293,7 +293,7 @@ public func vorssaintNowPlayingWatch() {
                  // Play and pause of any player, not only the system's current one.
                  "kMRMediaRemotePlayerIsPlayingDidChangeNotification"]
         // Its name differs from the symbol's (a leading underscore on 27.2).
-        + [NotchNativePlayback.stringConstant("kMRMediaRemotePlayerPlaybackStateDidChangeNotification")].compactMap { $0 }
+        + [NativePlayback.stringConstant("kMRMediaRemotePlayerPlaybackStateDidChangeNotification")].compactMap { $0 }
     func refresh() {
         pending?.cancel()
         let work = DispatchWorkItem { vorssaintNowPlayingGet() }
@@ -309,7 +309,7 @@ public func vorssaintNowPlayingWatch() {
     }
     let termination = NSWorkspace.shared.notificationCenter.addObserver(
         forName: NSWorkspace.didTerminateApplicationNotification, object: nil, queue: .main) { _ in refresh() }
-    var commandFramer = NotchPlaybackCommandFramer()
+    var commandFramer = PlaybackCommandFramer()
     FileHandle.standardInput.readabilityHandler = { input in
         let data = input.availableData
         if data.isEmpty { exit(0) }
@@ -324,25 +324,25 @@ public func vorssaintNowPlayingWatch() {
     withExtendedLifetime((observers, termination)) { RunLoop.main.run() }
 }
 
-private func sendPlaybackCommand(_ request: NotchPlaybackRequest) {
+private func sendPlaybackCommand(_ request: PlaybackRequest) {
     let command = request.command
     switch command {
     case .source(let selection):
-        NotchNativeQueue.configure(nil)
-        NotchNativePlayback.choose(selection)
+        NativeQueue.configure(nil)
+        NativePlayback.choose(selection)
         vorssaintNowPlayingGet()
         return
     case .validate(let id, let context):
         emit(["validationRequest": id.uuidString,
-              "validationOK": NotchNativePlayback.validatedTarget(for: context) != nil])
+              "validationOK": NativePlayback.validatedTarget(for: context) != nil])
         return
-    case .queue(let request): NotchNativeQueue.configure(request); return
-    case .queueStop: NotchNativeQueue.configure(nil); return
-    case .queuePlay(let selected): NotchNativeQueue.play(selected); return
+    case .queue(let request): NativeQueue.configure(request); return
+    case .queueStop: NativeQueue.configure(nil); return
+    case .queuePlay(let selected): NativeQueue.play(selected); return
     default: break
     }
     guard let context = request.context,
-          let target = NotchNativePlayback.validatedTarget(for: context) else { emit(["sent": false]); return }
+          let target = NativePlayback.validatedTarget(for: context) else { emit(["sent": false]); return }
     let identifier: Int32
     var options: CFDictionary?
     switch command {
@@ -350,12 +350,12 @@ private func sendPlaybackCommand(_ request: NotchPlaybackRequest) {
     case .next: identifier = 4
     case .previous: identifier = 5
     case .seek(let position):
-        guard let key = NotchNativePlayback.stringConstant("kMRMediaRemoteOptionPlaybackPosition") else {
+        guard let key = NativePlayback.stringConstant("kMRMediaRemoteOptionPlaybackPosition") else {
             emit(["sent": false]); return
         }
         identifier = 24
         options = [key: position] as CFDictionary
     case .queue, .queueStop, .queuePlay, .validate, .source: return
     }
-    emit(["sent": NotchNativePlayback.send(identifier, options: options, to: target)])
+    emit(["sent": NativePlayback.send(identifier, options: options, to: target)])
 }

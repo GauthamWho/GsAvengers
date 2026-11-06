@@ -1296,17 +1296,12 @@ enum ScreenshotFeatureTests {
                     selectionInProgress: false,
                     capturePending: false),
                "the full-screen action stays on the pointer display and disappears as soon as selection or capture starts")
-        suite.expect(ScreenshotSupport.fullScreenCaptureControlTopInset(
-            screenChromeHeight: 32,
-            notchControlsHeight: nil) == 44
-                && ScreenshotSupport.fullScreenCaptureControlTopInset(
-                    screenChromeHeight: 32,
-                    notchControlsHeight: 168) == 180,
-               "the full-screen action sits below screen chrome and any active notch capture controls")
+        suite.expect(ScreenshotSupport.fullScreenCaptureControlTopInset(screenChromeHeight: 32) == 44,
+               "the full-screen action sits below screen chrome")
         let fullScreenClickHost = PassThroughHostingView(interactiveRootView: Text("Full screen"))
         suite.expect(!fullScreenClickHost.passesThrough
                 && fullScreenClickHost.acceptsFirstMouse(for: nil),
-               "the interactive full-screen host receives its first click while Dynamic Island owns key focus")
+               "the interactive full-screen host receives its first click whichever panel holds key focus")
         let buttonSize = fullScreenClickHost.fittingSize
         suite.expect(buttonSize.width > 1 && buttonSize.height > 0,
                "the full-screen button retains a measurable size instead of collapsing to one point")
@@ -1386,18 +1381,12 @@ enum ScreenshotFeatureTests {
                 && routeBody.components(separatedBy: "autoShelve(").count == 2
                 && routeBody.contains("autoShelve(capture, saved: result.saved?.url)"),
                "a capture that does not open in the editor is offered to the shelf once, and discarding it from its preview takes it back")
-        // In the island the menu arrow is hidden, so a click there must open
-        // the durations rather than publish at once.
         let shareMenuCode = ((try? String(
             contentsOfFile: "Sources/Vorssaint/Services/QuickTools/ScreenshotQuickPreviewController.swift",
-            encoding: .utf8)) ?? "").components(separatedBy: "@ViewBuilder private var shareMenu: some View {")
+            encoding: .utf8)) ?? "").components(separatedBy: "private var shareMenu: some View {")
             .dropFirst().first?.components(separatedBy: "private var shareDurations").first ?? ""
-        let embeddedShareMenu = shareMenuCode.components(separatedBy: "} else {").first ?? ""
-        let floatingShareMenu = shareMenuCode.components(separatedBy: "} else {").dropFirst().first ?? ""
-        suite.expect(embeddedShareMenu.contains("Menu { shareDurations } label: { shareMenuLabel },")
-                && !embeddedShareMenu.contains("primaryAction")
-                && floatingShareMenu.contains("primaryAction: {\n                share(.saved())"),
-               "the island's link button opens the durations on a click, while the floating preview keeps its split button")
+        suite.expect(shareMenuCode.contains("primaryAction: {\n            share(.saved())"),
+               "the preview's link button keeps its split button: a click shares for the saved duration")
         let captureServiceSource = (try? String(
             contentsOfFile: "Sources/Vorssaint/Services/QuickTools/ScreenCaptureService.swift",
             encoding: .utf8)) ?? ""
@@ -1438,11 +1427,6 @@ enum ScreenshotFeatureTests {
                 && presentLines[makeKeyLine - 1].trimmingCharacters(in: .whitespaces)
                     == "if presentationPolicy.takesFocus {",
                "the screenshot preview takes key focus only behind the presentation policy, once the panel is on screen")
-        // The island reads the same policy: whether it takes the keyboard and
-        // whether a collapse closes the preview come from it, never a literal.
-        suite.expect(quickPreviewCode.contains("takeFocus: presentationPolicy.takesFocus,")
-                && quickPreviewCode.contains("closeOnCollapse: presentationPolicy.closesOnCollapse,"),
-               "the island preview takes the keyboard and closes on collapse exactly as the presentation policy says")
         let makeKeyCount = quickPreviewCode.components(separatedBy: "makeKey").count - 1
         let panelMakeKeyCount = panelBody.components(separatedBy: "makeKey").count - 1
         suite.expect(makeKeyCount == panelMakeKeyCount + 1 && panelMakeKeyCount >= 1,
@@ -1451,9 +1435,8 @@ enum ScreenshotFeatureTests {
                 && panelBody.contains("makeKey") && panelBody.contains("super.sendEvent"),
                "clicking the screenshot preview takes key focus and still delivers every preview button")
 
-        // With the controls in Dynamic Island, the island's panel holds key
-        // focus and the selection surface never becomes key on its own, so
-        // AppKit would spend the first click making it key and swallow it.
+        // A selection surface that is not key would have AppKit spend the
+        // first click making it key and swallow it.
         // The overlay view claims that click; comments are stripped so prose
         // cannot answer for the code.
         let selectionSource = (try? String(
@@ -1465,7 +1448,7 @@ enum ScreenshotFeatureTests {
             .components(separatedBy: "class ScreenshotOverlayView").dropFirst().first?
             .components(separatedBy: "\n}").first ?? ""
         suite.expect(overlayViewBody.contains("acceptsFirstMouse") && overlayViewBody.contains("acceptsFirstMouse(for event: NSEvent?) -> Bool { true }"),
-               "the capture surface claims the first click so a drag works while Dynamic Island holds key focus")
+               "the capture surface claims the first click so a drag works whichever panel holds key focus")
         // The other half of that drag: live, the panel is clear and draws no
         // dim over the desktop until the drag starts, and a window left at the
         // default passes a press on a transparent pixel through to the desktop.
@@ -3773,7 +3756,7 @@ enum ScreenshotFeatureTests {
             developerOverride: "https://test.example/")
         suite.expect(testShareEndpoint.absoluteString == "https://test.example"
                 && ScreenshotSharingSupport.endpoint(
-                    bundleIdentifier: "com.vorssaint.utils",
+                    bundleIdentifier: "com.gauthamwho.gsmac",
                     developerOverride: "https://test.example").absoluteString
                     == ScreenshotSharingSupport.productionEndpoint.absoluteString
                 && ScreenshotSharingSupport.endpoint(
@@ -3900,8 +3883,7 @@ enum ScreenshotFeatureTests {
         ]
         suite.expect(scratchpadHitTargetContracts.allSatisfy { scratchpadViewSource.contains($0) },
                "the scratchpad tab bar and header controls keep their full padded hit targets")
-        // The island's toggle runs in NotchCompactTests; the floating pad hands
-        // its checkboxes to the same service method, which edits through the
+        // The floating pad hands its checkboxes to the service method, which edits through the
         // registered text view.
         suite.expect(scratchpadViewSource.contains("onToggleTask: { service.toggleTask(box: $0) }"),
                "the floating pad's checkboxes edit through the service, so a click is one undoable edit")
@@ -4098,10 +4080,9 @@ enum ScreenshotFeatureTests {
 
         // Muting every microphone, not just the one the Mac is set to: an app
         // pointed at a device of its own has to go silent too.
-        suite.expect(MicMuteSupport.isOwnDevice(name: "Vorssaint Mixer")
-                && MicMuteSupport.isOwnDevice(name: "Vorssaint AirPlay")
-                && MicMuteSupport.isOwnDevice(name: "Vorssaint Island Levels")
-                && MicMuteSupport.isOwnDevice(name: "Vorssaint Recorder")
+        suite.expect(MicMuteSupport.isOwnDevice(name: "G’s Mac Mixer")
+                && MicMuteSupport.isOwnDevice(name: "G’s Mac AirPlay")
+                && MicMuteSupport.isOwnDevice(name: "G’s Mac Recorder")
                 && !MicMuteSupport.isOwnDevice(name: "MacBook Air Microphone"),
                "the mute skips the app's own aggregate devices and no other")
         suite.expect(!MicMuteSupport.shouldSaveVolume(nil)
@@ -4270,46 +4251,17 @@ enum ScreenshotFeatureTests {
         GlobalShortcut.refreshLayoutLabels()
     }
 
-    /// The island follows "Show in screenshots and videos" in Vorssaint's own
-    /// captures too, area selections included, except while it is the tool
-    /// taking the picture.
+    /// Hiding the app's windows leaves every own window out; otherwise only
+    /// the protected capture interface stays out.
     private static func islandCaptureChecks(_ suite: TestSuite) {
-        let island: CGWindowID = 20, copy: CGWindowID = 21, editor: CGWindowID = 11, overlay: CGWindowID = 12
-        let islandWindows: Set<CGWindowID> = [island, copy]
-        let ownWindows: Set<CGWindowID> = [editor, overlay, island, copy]
-        func shown(preference: Bool, tool: Bool) -> Set<CGWindowID> {
-            ScreenshotCapturePolicy.islandCaptureWindowIDs(
-                islandWindowIDs: islandWindows, mainWindowID: island,
-                showsInCaptures: preference, showsCaptureTool: tool)
-        }
-        suite.expect(shown(preference: true, tool: false) == islandWindows,
-                     "the island at rest, or open on a page, is in the picture when it shows in captures")
-        suite.expect(shown(preference: true, tool: true) == [copy],
-                     "the capture controls or a capture just taken stay out; copies on other displays stay in")
-        suite.expect(shown(preference: false, tool: false).isEmpty && shown(preference: false, tool: true).isEmpty,
-                     "the island stays out of every capture when it does not show in captures")
-
-        for tool in [false, true] {
-            let visible = shown(preference: true, tool: tool)
-            // What NotchService protects: the island windows not shown.
-            let protected = islandWindows.subtracting(visible).union([overlay])
-            let hidden = ScreenshotCapturePolicy.excludedWindowIDs(
-                hideVorssaintWindows: true, ownWindowIDs: ownWindows,
-                protectedWindowIDs: protected, islandWindowIDs: visible)
-            suite.expect(hidden == ownWindows.subtracting(visible),
-                         "hiding Vorssaint windows leaves the shown island in (capture tool: \(tool))")
-            let kept = ScreenshotCapturePolicy.excludedWindowIDs(
-                hideVorssaintWindows: false, ownWindowIDs: ownWindows,
-                protectedWindowIDs: protected, islandWindowIDs: visible)
-            suite.expect(kept == protected,
-                         "showing Vorssaint windows still keeps the capture interface out (capture tool: \(tool))")
-        }
-        // Watch reads an area and must never see the island, whatever the preference says.
+        let editor: CGWindowID = 11, overlay: CGWindowID = 12
+        let ownWindows: Set<CGWindowID> = [editor, overlay]
         suite.expect(ScreenshotCapturePolicy.excludedWindowIDs(
-            hideVorssaintWindows: true, ownWindowIDs: ownWindows,
-            protectedWindowIDs: islandWindows.union([overlay]),
-            islandWindowIDs: shown(preference: true, tool: false)) == ownWindows,
-                     "a caller that protects the island keeps it out even when it shows in captures")
+            hideVorssaintWindows: true, ownWindowIDs: ownWindows, protectedWindowIDs: [overlay]) == ownWindows,
+                     "hiding the app's windows keeps all of them out")
+        suite.expect(ScreenshotCapturePolicy.excludedWindowIDs(
+            hideVorssaintWindows: false, ownWindowIDs: ownWindows, protectedWindowIDs: [overlay]) == [overlay],
+                     "showing the app's windows still keeps the capture interface out")
     }
 }
 

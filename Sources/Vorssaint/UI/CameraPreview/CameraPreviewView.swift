@@ -9,8 +9,7 @@ import SwiftUI
 /// anywhere else or switching to the meeting app closes it.
 struct CameraPreviewView: View {
     var size = CGSize(width: 320, height: 240)
-    /// The picker over the image on hover. The island turns it off: its top
-    /// row holds the picker and the stop button, clear of the image.
+    /// The picker over the image on hover.
     var showsCameraMenu = true
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var service = CameraPreviewService.shared
@@ -58,8 +57,8 @@ struct CameraPreviewView: View {
                 .controlSize(.small)
             }
         case .unavailable:
-            statusMessage(icon: "video.slash", text: FeatureStrings.notchActivities(l10n.language).cameraUnavailable) {
-                Button(FeatureStrings.notchActivities(l10n.language).startCamera, action: service.retryCapture)
+            statusMessage(icon: "video.slash", text: FeatureStrings.shared(l10n.language).cameraUnavailable) {
+                Button(FeatureStrings.shared(l10n.language).startCamera, action: service.retryCapture)
                     .controlSize(.small)
             }
         case .noCamera:

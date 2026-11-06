@@ -1,9 +1,9 @@
 name: CI
 
+# Manual only: macOS runners use many Actions minutes on a private repo.
+# Run it from the Actions tab when you want a clean-machine build.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -33,7 +33,7 @@ jobs:
         run: ./build.sh
 
       - name: Selftest
-        run: ./build/Vorssaint --selftest
+        run: ./build/GsMac --selftest
 
       - name: Unit tests
         run: ./build.sh --test
@@ -51,7 +51,7 @@ jobs:
         run: ./build.sh
 
       - name: Selftest
-        run: ./build/Vorssaint --selftest
+        run: ./build/GsMac --selftest
 
       - name: Package DMG
         run: ./Tools/make-dmg.sh

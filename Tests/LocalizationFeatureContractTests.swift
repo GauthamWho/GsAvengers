@@ -290,7 +290,7 @@ enum LocalizationFeatureContractTests {
                                    strings.cleaningOverlayMouseHint, strings.cleaningPanelCaption]
             suite.expect(cleaningStrings.allSatisfy { !$0.isEmpty && !$0.contains("—") },
                    "\(prefix) cleaning mode strings are present without em dash")
-            let highlightsStrings = [strings.highlightsTitle, strings.highlightsTitleClipboardRedesign,
+            let highlightsStrings = [strings.highlightsTitleClipboardRedesign,
                                      strings.highlightsCaptionDockPreview,
                                      strings.highlightsCaptionScreenshot,
                                      strings.highlightsCaptionSnippetLibrary,
@@ -298,7 +298,7 @@ enum LocalizationFeatureContractTests {
                                      strings.highlightsCaptionClipboardRedesign,
                                      strings.highlightsConfigure,
                                      strings.highlightsTry, strings.highlightsSeeAll,
-                                     strings.reviewIntro, strings.reviewHighlights]
+                                     strings.reviewIntro]
             suite.expect(highlightsStrings.allSatisfy { !$0.isEmpty && !$0.contains("—") },
                    "\(prefix) update highlights strings are present without em dash")
             let officialHomebrewIntroStrings = [
@@ -409,7 +409,7 @@ enum LocalizationFeatureContractTests {
         suite.expect(bundleLocalizations.contains("tr"), "Info.plist declares Turkish as a bundle localization")
         suite.expect(bundleLocalizations.contains("ko"), "Info.plist declares Korean as a bundle localization")
         let baseAudioPrompt = infoPlist?["NSAudioCaptureUsageDescription"] as? String ?? ""
-        suite.expect(baseAudioPrompt.contains("Vorssaint uses each app's audio"),
+        suite.expect(baseAudioPrompt.contains("G’s Mac uses each app's audio"),
                "base audio permission prompt is an English fallback")
         let organizerFolderPromptKeys = [
             "NSDesktopFolderUsageDescription", "NSDocumentsFolderUsageDescription",
@@ -446,10 +446,10 @@ enum LocalizationFeatureContractTests {
         // that is registered under the other name, and fan control would just
         // never answer.
         let helperTemplate = (try? String(
-            contentsOfFile: "Resources/com.vorssaint.utils.fan-control.plist",
+            contentsOfFile: "Resources/com.gauthamwho.gsmac.fan-control.plist",
             encoding: .utf8)) ?? ""
         suite.expect(!helperTemplate.isEmpty, "the helper template reads back")
-        let releaseHelperID = "com.vorssaint.utils.fan-control"
+        let releaseHelperID = "com.gauthamwho.gsmac.fan-control"
         let mentions = helperTemplate.components(separatedBy: releaseHelperID).count - 1
         suite.expect(mentions == 3,
                "the helper template names the release service exactly where the build rewrites it (\(mentions))")
@@ -472,7 +472,6 @@ enum LocalizationFeatureContractTests {
             ("finderRenameDefault", GlobalShortcut.finderRenameDefault),
             ("keepAwakeDefault", GlobalShortcut.keepAwakeDefault),
             ("micMuteDefault", GlobalShortcut.micMuteDefault),
-            ("notchDefault", GlobalShortcut.notchDefault),
             ("pastePlainDefault", GlobalShortcut.pastePlainDefault),
             ("pointerNextDisplayDefault", GlobalShortcut.pointerNextDisplayDefault),
             ("quickLauncherDefault", GlobalShortcut.quickLauncherDefault),
@@ -508,7 +507,7 @@ enum LocalizationFeatureContractTests {
             ("windowLayoutTopLeftDefault", GlobalShortcut.windowLayoutTopLeftDefault),
             ("windowLayoutTopRightDefault", GlobalShortcut.windowLayoutTopRightDefault),
         ]
-        suite.expect(defaultShortcuts.count == 42, "every default shortcut is in the round trip")
+        suite.expect(defaultShortcuts.count == 41, "every default shortcut is in the round trip")
         var brokenShortcuts: [String] = []
         for (name, shortcut) in defaultShortcuts {
             guard let restored = GlobalShortcut(storageValue: shortcut.storageValue),

@@ -781,7 +781,7 @@ struct CleanerView: View {
                 .frame(maxWidth: .infinity)
             } else {
                 if compact {
-                    // The island, menu panel and launcher already scroll.
+                    // The menu panel and launcher already scroll.
                     // Keep the rows and Clean button in that same scroll area.
                     VStack(alignment: .leading, spacing: 16) {
                         resultsGroups

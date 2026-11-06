@@ -40,29 +40,8 @@ enum ShelfDragCompletionContract {
         }
     }
 
-    final class NotchService {
-        static var shared = NotchService()
-        var presentationWindow: Window? = Window()
-        var expanded = true
-        var selected: NotchModule = .files
-        var showingAppPanel = false
-        var showingSections = false
-        var pinned = false
-        var heldDrag = false
-        var closures = 0
-        var dragMoves: [CGPoint] = []
-        func fileDragChanged(_ active: Bool, internalDrag: Bool) { heldDrag = active && internalDrag }
-        func shelfDragMoved(to point: CGPoint) { dragMoves.append(point) }
-        func collapse() {
-            precondition(!heldDrag, "release the drag before trying to collapse")
-            closures += 1
-            expanded = false
-        }
-    }
-
     static func reset() {
         UserDefaults.standard = UserDefaults.Store()
-        NotchService.shared = NotchService()
         Service.shared = Service()
     }
 }
@@ -77,24 +56,24 @@ enum ShelfDragCompletionTests {
                     for merged in [false, true] {
                         Context.reset()
                         let service = Context.Service()
-                        let notch = Context.NotchService.shared
-                        notch.pinned = pinned
-                        service.isPinned = !pinned
+                        let source = Context.Window()
+                        service.panel = source
+                        service.isVisible = true
+                        service.isPinned = pinned
                         Context.UserDefaults.standard.closeAfterDrop = close
                         let id = UUID()
-                        service.beginInternalDrag(items: Context.dragItems([id]), from: notch.presentationWindow)
+                        service.beginInternalDrag(items: Context.dragItems([id]), from: source)
                         service.internalDragWasMerged = merged
-                        suite.expect(notch.heldDrag, "a drag from the notch holds its working surface")
                         service.completeInternalDrag(dropAccepted: accepted)
                         let transferred = accepted && !merged
-                        suite.expect(notch.closures == (transferred && close && !pinned ? 1 : 0),
-                               "notch completion honors accepted drops, local merges, its pin and the close preference")
-                        suite.expect(service.removed == (transferred ? [id] : []) && !notch.heldDrag
+                        suite.expect(service.floatingClosures == (transferred && close && !pinned ? 1 : 0),
+                               "completion honors accepted drops, local merges, the pin and the close preference")
+                        suite.expect(service.removed == (transferred ? [id] : [])
                                && service.internalDragWindow == nil && service.activeInternalDragIDs.isEmpty
                                && !service.internalDragHoldsPackageContent,
                                "completion preserves removal policy and always releases the drag's source")
-                        suite.expect(service.floatingClosures == 0 && service.dockedClosures == 0,
-                               "closing an embedded shelf leaves the separate presentations alone")
+                        suite.expect(service.dockedClosures == 0,
+                               "closing the floating shelf leaves the docked one alone")
                     }
                 }
             }
@@ -103,36 +82,16 @@ enum ShelfDragCompletionTests {
         for docked in [false, true] {
             Context.reset()
             let service = Context.Service()
-            let notch = Context.NotchService.shared
             let source = Context.Window()
             if docked { service.dockedPanel = source } else { service.panel = source }
             service.isVisible = !docked
             service.dockedVisible = docked
-            notch.pinned = true
             Context.UserDefaults.standard.removeAfterDrop = false
             service.beginInternalDrag(items: Context.dragItems([UUID()]), from: source)
-            suite.expect(!notch.heldDrag, "a separate shelf cannot hold an unrelated notch open")
             service.completeInternalDrag(dropAccepted: true)
             suite.expect(service.floatingClosures == (docked ? 0 : 1) && service.dockedClosures == (docked ? 1 : 0)
-                   && notch.closures == 0 && service.removed.isEmpty,
-                   "separate shelf completion retains its own close, pin and removal behavior")
-        }
-
-        // Only a tile dragged from the island tells it where the drag is, and
-        // only while the drag lasts.
-        for fromNotch in [false, true] {
-            Context.reset()
-            let service = Context.Service()
-            let notch = Context.NotchService.shared
-            let source = fromNotch ? notch.presentationWindow! : Context.Window()
-            if !fromNotch { service.panel = source; service.isVisible = true }
-            service.internalDragMoved(to: CGPoint(x: 1, y: 1))
-            service.beginInternalDrag(items: Context.dragItems([UUID()]), from: source)
-            service.internalDragMoved(to: CGPoint(x: 2, y: 2))
-            service.completeInternalDrag(dropAccepted: false)
-            service.internalDragMoved(to: CGPoint(x: 3, y: 3))
-            suite.expect(notch.dragMoves == (fromNotch ? [CGPoint(x: 2, y: 2)] : []),
-                   "only a drag from the island, while it lasts, can move the island aside")
+                   && service.removed.isEmpty,
+                   "each shelf presentation keeps its own close, pin and removal behavior")
         }
 
         Context.reset()
@@ -144,25 +103,16 @@ enum ShelfDragCompletionTests {
         suite.expect(pinnedService.removed == [looseID],
                "a pinned shelf item survives a drag-out that removes the rest")
 
-        for changedSurface in 0..<5 {
-            Context.reset()
-            let service = Context.Service()
-            let notch = Context.NotchService.shared
-            let source = notch.presentationWindow!
-            service.panel = Context.Window()
-            service.isVisible = true
-            service.beginInternalDrag(items: Context.dragItems([UUID()]), from: source)
-            switch changedSurface {
-            case 0: notch.selected = .music
-            case 1: notch.showingSections = true
-            case 2: notch.showingAppPanel = true
-            case 3: notch.expanded = false
-            default: notch.presentationWindow = Context.Window(); notch.heldDrag = false
-            }
-            service.completeInternalDrag(dropAccepted: true)
-            suite.expect(notch.closures == 0 && service.floatingClosures == 0,
-                   "an old drag cannot close a different destination or a replacement notch window")
-        }
+        // A drag from a window that is not one of the shelf's own never
+        // closes a shelf that happens to be open.
+        Context.reset()
+        let stray = Context.Service()
+        stray.panel = Context.Window()
+        stray.isVisible = true
+        stray.beginInternalDrag(items: Context.dragItems([UUID()]), from: Context.Window())
+        stray.completeInternalDrag(dropAccepted: true)
+        suite.expect(stray.floatingClosures == 0 && stray.dockedClosures == 0,
+               "an old drag cannot close a different destination")
         fileDragProtection(suite)
     }
 

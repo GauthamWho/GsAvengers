@@ -18,20 +18,6 @@ enum MediaWorkspaceLayoutTests {
         }
     }
 
-    final class Presentation {
-        let archives: ShelfDropRoutingContract.NotchFileToolsService
-        var heights: [CGFloat] = []
-        init(_ archives: ShelfDropRoutingContract.NotchFileToolsService) { self.archives = archives }
-        func refreshPresentation() {
-            if let height = archives.mediaContentHeight { heights.append(height) }
-        }
-    }
-
-    class HeightState {
-        let archives = ShelfDropRoutingContract.NotchFileToolsService()
-        lazy var service = Presentation(archives)
-    }
-
     static func run(_ suite: TestSuite) {
         func settle(_ condition: () -> Bool) -> Bool {
             let deadline = Date().addingTimeInterval(2)
@@ -41,32 +27,18 @@ enum MediaWorkspaceLayoutTests {
             return condition()
         }
         let fixture = Fixture()
-        let fileView = FileView()
-        _ = fileView.archives.openMedia(.videoCompressor, inputs: [])
-        let sessionID = fileView.archives.mediaSession!.id
         var measured: CGFloat = 0
-        let host = NSHostingView(rootView: Workspace(fixture: fixture, onContentHeightChange: {
-            measured = $0
-            fileView.mediaHeightChanged($0, id: sessionID)
-        }))
+        let host = NSHostingView(rootView: Workspace(fixture: fixture, onContentHeightChange: { measured = $0 }))
         host.frame = CGRect(x: 0, y: 0, width: 380, height: 700)
         host.layoutSubtreeIfNeeded()
         suite.expect(settle { measured == 246 },
-               "embedded media reports the intrinsic height of header, picker, spacing and content instead of the viewport")
+               "compact media reports the intrinsic height of header, picker, spacing and content instead of the viewport")
         for height: CGFloat in [80, 550, 180] {
             fixture.height = height
             host.layoutSubtreeIfNeeded()
             suite.expect(settle { measured == height + 66 },
                    "media's reported height follows options and results as they grow or shrink")
-            suite.expect(fileView.service.heights.last == measured,
-                   "the native window receives its new size in the measurement callback, before a later preferences refresh")
         }
-        let frames = fileView.service.heights
-        fileView.mediaHeightChanged(measured, id: sessionID)
-        fileView.mediaHeightChanged(999, id: UUID())
-        fileView.mediaHeightChanged(.nan, id: sessionID)
-        suite.expect(fileView.service.heights == frames,
-               "duplicate, invalid and stale measurements never restart the resize")
 
         let selection = Selection()
         let picker = ToolPicker(fixture: selection, onToolChange: {
@@ -86,20 +58,13 @@ enum MediaWorkspaceLayoutTests {
         func types(in view: NSView) -> Set<NSPasteboard.PasteboardType> {
             view.subviews.reduce(into: Set(view.registeredDraggedTypes)) { $0.formUnion(types(in: $1)) }
         }
-        for embedded in [false, true] {
-            let input = NSHostingView(rootView: Input(inNotch: embedded))
-            input.frame = CGRect(x: 0, y: 0, width: 300, height: 70)
-            input.layoutSubtreeIfNeeded()
-            _ = input.fittingSize
-            if embedded {
-                suite.expect(types(in: input).isEmpty,
-                       "embedded media leaves file drops to the island's destination chooser")
-            } else {
-                // SwiftUI registers broad transport types and filters the
-                // requested file URL type in its own drop coordinator.
-                suite.expect(settle { !types(in: input).isEmpty },
-                       "standalone media retains its native direct file drop target")
-            }
-        }
+        let input = NSHostingView(rootView: Input())
+        input.frame = CGRect(x: 0, y: 0, width: 300, height: 70)
+        input.layoutSubtreeIfNeeded()
+        _ = input.fittingSize
+        // SwiftUI registers broad transport types and filters the requested
+        // file URL type in its own drop coordinator.
+        suite.expect(settle { !types(in: input).isEmpty },
+               "media retains its native direct file drop target")
     }
 }

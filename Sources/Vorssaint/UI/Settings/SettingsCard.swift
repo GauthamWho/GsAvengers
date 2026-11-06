@@ -4,8 +4,7 @@
 import SwiftUI
 
 /// One rounded group of related controls on a redesigned Settings page, with
-/// an optional heading. The same card the Dynamic Island page draws, so the
-/// pages read as one design.
+/// an optional heading, so the pages read as one design.
 struct SettingsCard<Content: View>: View {
     let title: String?
     let content: Content
@@ -129,7 +128,7 @@ struct SettingsFeatureSwitchRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Button(FeatureStrings.notchEditor(l10n.language).openFeatures) { feature.showInFeatures() }
+                    Button(FeatureStrings.shared(l10n.language).openFeatures) { feature.showInFeatures() }
                         .controlSize(.small)
                 }
                 .padding(.leading, settingsRowTextInset)

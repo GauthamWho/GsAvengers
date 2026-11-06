@@ -112,7 +112,7 @@ struct MonitorSettings: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             MenuBarMetricTiles()
-            Text(FeatureStrings.notchEditor(l10n.language).reorderHint)
+            Text(FeatureStrings.shared(l10n.language).reorderHint)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

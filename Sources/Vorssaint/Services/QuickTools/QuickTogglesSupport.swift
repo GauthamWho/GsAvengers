@@ -107,8 +107,8 @@ enum QuickTogglesSupport {
     /// ourselves mid-sweep would leave the remaining apps running with no way
     /// to finish the pass from here.
     static let vorssaintBundleIdentifiers = [
-        "com.vorssaint.utils",
-        "com.vorssaint.utils.dev",
+        "com.gauthamwho.gsmac",
+        "com.gauthamwho.gsmac.dev",
     ]
 
     /// `NSApplication.ActivationPolicy.regular.rawValue`. Kept as an Int so this

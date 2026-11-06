@@ -132,56 +132,14 @@ enum SettingsFeatureTests {
                "backup carries preferences, menu bar pins, Keep Awake appearance, language and hub availability, never a session's all-apps output")
         suite.expect(backupKeys.contains(DefaultsKey.launchAtLoginWanted),
                "the launch at login choice travels with the settings backup")
-        let islandKeys: Set<String> = [
-            DefaultsKey.notchEnabled,
-            DefaultsKey.notchShowPlayingMusic,
-            DefaultsKey.notchQuickAccessSide,
-            DefaultsKey.panelControlNotch,
-            AppFeature.notch.availabilityKey,
-            AppFeature.notchCalendar.availabilityKey,
+        let oldIslandBackup: [String: Any] = [
+            SettingsBackupSupport.formatVersionKey: SettingsBackupSupport.formatVersion,
+            SettingsBackupSupport.settingsKey: ["notchEnabled": true, "featureAvailable.notch": true,
+                                                DefaultsKey.switcherEnabled: true],
         ]
-        suite.expect(islandKeys.isSubset(of: backupKeys),
-               "island preferences and availability are eligible for export")
-        let islandBackup = SettingsBackupSupport.payload(appVersion: "3.4.0-beta.5") { key in
-            switch key {
-            case DefaultsKey.notchEnabled: return true
-            case DefaultsKey.notchShowPlayingMusic: return false
-            case DefaultsKey.notchQuickAccessSide: return "controls"
-            case DefaultsKey.panelControlNotch: return false
-            case AppFeature.notch.availabilityKey: return true
-            case AppFeature.notchCalendar.availabilityKey: return false
-            default: return nil
-            }
-        }
-        var islandSettings: [String: Any]?
-        if let data = try? PropertyListSerialization.data(fromPropertyList: islandBackup,
-                                                          format: .xml, options: 0),
-           let parsed = try? PropertyListSerialization.propertyList(from: data,
-                                                                     options: [], format: nil) as? [String: Any] {
-            islandSettings = SettingsBackupSupport.sanitizedSettings(from: parsed)
-        }
-        suite.expect(islandSettings?[DefaultsKey.notchEnabled] as? Bool == true
-                && islandSettings?[DefaultsKey.notchShowPlayingMusic] as? Bool == false
-                && islandSettings?[DefaultsKey.notchQuickAccessSide] as? String == "controls"
-                && islandSettings?[DefaultsKey.panelControlNotch] as? Bool == false
-                && islandSettings?[AppFeature.notch.availabilityKey] as? Bool == true
-                && islandSettings?[AppFeature.notchCalendar.availabilityKey] as? Bool == false,
-               "a current backup round-trips island settings")
-        suite.expect(!SettingsBackupSupport.omitsDynamicIslandSettings(islandSettings ?? [:])
-                && islandKeys.isSubset(of: SettingsBackupSupport.keysToClear(
-                    whenImporting: islandSettings ?? [:])),
-            "a current backup replaces existing island settings")
-        let preIslandBackup: [String: Any] = [
-            SettingsBackupSupport.formatVersionKey: 1,
-            SettingsBackupSupport.appVersionKey: "3.3.5",
-            SettingsBackupSupport.settingsKey: [DefaultsKey.switcherEnabled: true],
-        ]
-        let preIslandSettings = SettingsBackupSupport.sanitizedSettings(from: preIslandBackup) ?? [:]
-        let oldKeysToClear = SettingsBackupSupport.keysToClear(whenImporting: preIslandSettings)
-        suite.expect(SettingsBackupSupport.omitsDynamicIslandSettings(preIslandSettings)
-                && islandKeys.isDisjoint(with: oldKeysToClear)
-                && oldKeysToClear.contains(DefaultsKey.switcherEnabled),
-               "a pre-island backup leaves local island settings intact while importing other preferences")
+        let oldIslandSettings = SettingsBackupSupport.sanitizedSettings(from: oldIslandBackup) ?? [:]
+        suite.expect(oldIslandSettings.keys.sorted() == [DefaultsKey.switcherEnabled],
+               "a backup written while the notch existed restores without any notch setting")
         suite.expect(Defaults.registeredDefaults[DefaultsKey.musicBlockPlayReplacement] as? Bool == true
                 && backupKeys.contains(DefaultsKey.musicBlockPlayReplacement),
                "replacement playback keeps the current default and its opt-out travels with settings backup")
@@ -191,34 +149,6 @@ enum SettingsFeatureTests {
         suite.expect(SettingsBackupSupport.sanitizedSettings(from: replacementOptOut)?[
                     DefaultsKey.musicBlockPlayReplacement] as? Bool == false,
                "restoring a backup preserves the choice to open the replacement without playing")
-        let retiredDisplayBackup: [String: Any] = [
-            SettingsBackupSupport.formatVersionKey: SettingsBackupSupport.formatVersion,
-            SettingsBackupSupport.settingsKey: [DefaultsKey.notchDisplay: "chosen"],
-        ]
-        suite.expect(SettingsBackupSupport.sanitizedSettings(from: retiredDisplayBackup)?[DefaultsKey.notchDisplay] as? String
-                    == NotchDisplay.automatic.rawValue,
-               "a backup with a display mode this version does not offer restores the automatic choice")
-        let mainDisplayBackup: [String: Any] = [
-            SettingsBackupSupport.formatVersionKey: SettingsBackupSupport.formatVersion,
-            SettingsBackupSupport.settingsKey: [DefaultsKey.notchDisplay: NotchDisplay.main.rawValue],
-        ]
-        suite.expect(SettingsBackupSupport.sanitizedSettings(from: mainDisplayBackup)?[DefaultsKey.notchDisplay] as? String
-                    == NotchDisplay.main.rawValue,
-               "a backup keeps the main display choice")
-        let pointerDisplayBackup: [String: Any] = [
-            SettingsBackupSupport.formatVersionKey: SettingsBackupSupport.formatVersion,
-            SettingsBackupSupport.settingsKey: [DefaultsKey.notchDisplay: NotchDisplay.pointer.rawValue],
-        ]
-        suite.expect(SettingsBackupSupport.sanitizedSettings(from: pointerDisplayBackup)?[DefaultsKey.notchDisplay] as? String
-                    == NotchDisplay.pointer.rawValue,
-               "a backup keeps the choice to follow the pointer, which belongs to no single Mac")
-        let allDisplaysBackup: [String: Any] = [
-            SettingsBackupSupport.formatVersionKey: SettingsBackupSupport.formatVersion,
-            SettingsBackupSupport.settingsKey: [DefaultsKey.notchDisplay: NotchDisplay.all.rawValue],
-        ]
-        suite.expect(SettingsBackupSupport.sanitizedSettings(from: allDisplaysBackup)?[DefaultsKey.notchDisplay] as? String
-                    == NotchDisplay.all.rawValue,
-               "a backup keeps the choice of every display")
         suite.expect(backupKeys.contains(DefaultsKey.cleaningModeKeepScreenVisible),
                "the cleaning mode keep screen visible choice travels with the settings backup")
         suite.expect(backupKeys.contains(DefaultsKey.appearance),
@@ -477,8 +407,7 @@ enum SettingsFeatureTests {
                "the backup never carries a note about a start that did not finish")
         suite.expect(backupKeys.contains(DefaultsKey.hasOnboarded)
                 && backupKeys.contains(DefaultsKey.featuresOnboardingVersion)
-                && backupKeys.contains(DefaultsKey.lastUpdateIntroVersion)
-                && backupKeys.contains(DefaultsKey.brightnessUpdatePromptState),
+                && backupKeys.contains(DefaultsKey.lastUpdateIntroVersion),
                "a restored Mac does not replay onboarding or the intros already seen")
         let backupPayload = SettingsBackupSupport.payload(appVersion: "test") { key in
             key == DefaultsKey.switcherEnabled ? true : nil

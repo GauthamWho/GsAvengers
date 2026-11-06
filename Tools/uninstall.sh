@@ -2,16 +2,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Vorssaint
 
-# Cleanly removes Vorssaint and every piece of system state it created:
+# Cleanly removes G’s Mac (and its Developer build) and every piece of system
+# state they created. Vorssaint's own apps and files are never touched:
 # the fan helper daemon, the login item, TCC permissions, preferences, saved
 # state, the app's own data folder and (if present) the password-free
 # closed-lid sudoers rule. Leaves no dead entries behind.
-# Also clears the pre-rename "Vorssaint Utils.app" if it is still around.
 set -uo pipefail
 
-BUNDLE="com.vorssaint.utils"
-APP="/Applications/Vorssaint.app"
-LEGACY_APP="/Applications/Vorssaint Utils.app"
+BUNDLE="com.gauthamwho.gsmac"
+APP="/Applications/G’s Mac.app"
+LEGACY_APP="/Applications/G’s Mac (Developer).app"
 
 # A readable domain with a missing key is different from a failed read. Export
 # the whole domain first, including an empty dictionary when it does not exist.
@@ -113,8 +113,8 @@ spaces_removal_state() {
 }
 
 echo "▸ Quitting…"
-pkill -x Vorssaint 2>/dev/null || true
-pkill -x VorssaintUtils 2>/dev/null || true
+pkill -x GsMac 2>/dev/null || true
+pkill -x GsMacDeveloper 2>/dev/null || true
 sleep 0.5
 
 # Detach from the system from inside whichever bundle still exists: unregisters
@@ -125,7 +125,7 @@ sleep 0.5
 # check after the loop settles what its absence or failure left behind.
 detached=1
 ran_app=0
-for candidate in "$APP/Contents/MacOS/Vorssaint" "$LEGACY_APP/Contents/MacOS/VorssaintUtils"; do
+for candidate in "$APP/Contents/MacOS/GsMac" "$LEGACY_APP/Contents/MacOS/GsMacDeveloper"; do
     if [[ -x "$candidate" ]]; then
         echo "▸ Detaching the fan helper and login item, restoring sleep and Space rearranging…"
         ran_app=1
@@ -198,18 +198,29 @@ rm -rf "$HOME/Library/HTTPStorages/$BUNDLE" "$HOME/Library/HTTPStorages/$BUNDLE.
 # ordinary case, and prints an error over a successful uninstall.
 rm -f "$HOME/Library/Preferences/ByHost/$BUNDLE".*.plist(N)
 
+# The Developer build keeps its own settings and data under its own ID.
+DEV_BUNDLE="$BUNDLE.dev"
+tccutil reset All "$DEV_BUNDLE" >/dev/null 2>&1 || true
+defaults delete "$DEV_BUNDLE" >/dev/null 2>&1 || true
+rm -f "$HOME/Library/Preferences/$DEV_BUNDLE.plist"
+rm -rf "$HOME/Library/Saved Application State/$DEV_BUNDLE.savedState"
+rm -rf "$HOME/Library/Application Support/$DEV_BUNDLE"
+rm -rf "$HOME/Library/Caches/$DEV_BUNDLE"
+rm -rf "$HOME/Library/HTTPStorages/$DEV_BUNDLE" "$HOME/Library/HTTPStorages/$DEV_BUNDLE.binarycookies"
+rm -f "$HOME/Library/Preferences/ByHost/$DEV_BUNDLE".*.plist(N)
+
 # The closed-lid rule under its current name and the two earlier ones, the
 # same files the app looks for. Each path is checked on its own. zsh passes an
 # unquoted string to a command as a single word, and one `ls` over all three
 # fails as soon as any of them is missing.
-RULES=(/etc/sudoers.d/vorssaint-clamshell /etc/sudoers.d/vorssaint-utils-clamshell /etc/sudoers.d/vorss-clamshell)
+RULES=(/etc/sudoers.d/gsmac-clamshell)
 found_rules=()
 for rule in "${RULES[@]}"; do
     [[ -e "$rule" ]] && found_rules+=("$rule")
 done
 if (( ${#found_rules} )); then
     echo "▸ Removing closed-lid sudoers rule (asks for your admin password)…"
-    osascript -e "do shell script \"rm -f $found_rules\" with administrator privileges with prompt \"Vorssaint uninstaller\"" || true
+    osascript -e "do shell script \"rm -f $found_rules\" with administrator privileges with prompt \"G’s Mac uninstaller\"" || true
 fi
 
 # `--uninstall` restores sleep, but it runs before the app has an

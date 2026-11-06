@@ -8,20 +8,6 @@ import Foundation
 /// reply parsing, value scaling and the display-to-service match score. No
 /// IOKit here so the unit tests cover every byte.
 enum BrightnessSupport {
-    /// Whether the island's brightness slider is on and shows the focused
-    /// display (with none focused, the first it can show).
-    static func sliderShowsFocusedDisplay(controlEnabled: Bool, shown: [UInt32], focused: UInt32?) -> Bool {
-        guard controlEnabled else { return false }
-        guard let focused else { return !shown.isEmpty }
-        return shown.contains(focused)
-    }
-
-    /// A key moves the island's level to its display only while the island
-    /// is open, where the slider shows the move; a display picked there
-    /// outlasts keys pressed while it is closed.
-    static func keyMovesFocus(islandOpen: Bool, focused: UInt32?, key: UInt32) -> Bool {
-        islandOpen && focused != key
-    }
 
     struct DisplayTopology: Equatable {
         let online: Set<UInt32>
@@ -549,8 +535,8 @@ enum BrightnessSupport {
     }
 
     /// Plain brightness key presses reach the system unless this app answers
-    /// them: to follow the pointer, to show its own overlay or the island in
-    /// place of the system's, or to take a finer step. Only then is their
+    /// them: to follow the pointer, to show its own overlay in place of the
+    /// system's, or to take a finer step. Only then is their
     /// keystroke tap worth it.
     static func answersPlainBrightnessKeys(followsPointer: Bool, overlayReplacesNative: Bool,
                                            finerSteps: Bool) -> Bool {
@@ -603,16 +589,6 @@ enum BrightnessSupport {
                                          overlayReplacesNative: Bool) -> Bool {
         if followsPointer, !displayIsBuiltIn { return true }
         return overlayReplacesNative
-    }
-
-    /// Whether this app shows a brightness change in place of the system:
-    /// with its overlay when that option is on, or in the island while the
-    /// island shows notices. An island hidden until hover or away in full
-    /// screen shows none, so the key keeps the system's own feedback rather
-    /// than bringing back the overlay its option turned off.
-    static func overlayReplacesNative(overlayEnabled: Bool, islandRoutes: Bool,
-                                      islandShowsNotices: Bool) -> Bool {
-        overlayEnabled || (islandRoutes && islandShowsNotices)
     }
 
     /// Sixteen segments match the system brightness steps. A non-zero value

@@ -276,8 +276,8 @@ enum RadialNowPlayingApplication {
         return icon
     }
 
-    /// The island and the radial card are non-activating panels, so Vorssaint
-    /// rarely holds activation when one is clicked. Since macOS 14 a bare
+    /// The radial card is a non-activating panel, so Vorssaint
+    /// rarely holds activation when it is clicked. Since macOS 14 a bare
     /// request from an inactive app is refused, and the player stayed behind.
     static func open(_ snapshot: RadialNowPlayingSnapshot) {
         if let application = runningApplication(for: snapshot) {

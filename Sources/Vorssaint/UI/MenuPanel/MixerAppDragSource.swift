@@ -121,7 +121,6 @@ struct MixerAppReorderModifier: ViewModifier {
     let icon: NSImage
     @Binding var draggingID: String?
     @Binding var target: MixerAppDropTarget?
-    let dragChanged: (Bool) -> Void
     let canMove: (String, String) -> Bool
     let move: (String, String, Bool) -> Void
     var sideways = false
@@ -134,8 +133,8 @@ struct MixerAppReorderModifier: ViewModifier {
         content
             .overlay {
                 MixerAppDragSource(id: id, icon: icon,
-                                   onBegin: { draggingID = $0; dragChanged(true) },
-                                   onEnd: { draggingID = nil; target = nil; dragChanged(false) },
+                                   onBegin: { draggingID = $0 },
+                                   onEnd: { draggingID = nil; target = nil },
                                    canMove: canMove,
                                    onTarget: { next in
                                        if next != nil || target?.id == id { target = next }

@@ -193,7 +193,7 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
         } else {
             description = CATapDescription(stereoGlobalTapButExcludeProcesses: [ownProcess])
         }
-        description.name = "Vorssaint Recorder"
+        description.name = "G’s Mac Recorder"
         description.isPrivate = true
         var tapID = AudioObjectID(0)
         guard AudioHardwareCreateProcessTap(description, &tapID) == noErr, tapID != 0 else {
@@ -281,7 +281,7 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
         guard aggregateID == 0, let clock,
               let hostUID = Self.hostDeviceUID() else { return }
         let aggregate: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "Vorssaint Recorder",
+            kAudioAggregateDeviceNameKey: "G’s Mac Recorder",
             kAudioAggregateDeviceUIDKey: UUID().uuidString,
             kAudioAggregateDeviceIsPrivateKey: true,
             kAudioAggregateDeviceMainSubDeviceKey: hostUID,
@@ -655,7 +655,7 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
 
     /// Every audio process the app answers for. A browser makes its sound in
     /// a helper process, so a tap on the app's own pid alone would never hear
-    /// it; the mixer and the island's level reader gather theirs the same way.
+    /// it; the mixer gathers its own the same way.
     /// The audio system lists only processes connected to it, so an app that
     /// has not played since it launched has none. Sound the system plays for
     /// an app from a process of its own, such as a call, is not the app's

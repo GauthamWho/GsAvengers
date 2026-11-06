@@ -154,7 +154,7 @@ struct ScreenRecordingCaptureSettings: View {
 
             Section {
                 Toggle(screenshotStrings.shareEnabledToggle, isOn: $sharingEnabled)
-                if sharingEnabled {
+                if sharingEnabled && AppInfo.remoteServicesEnabled {
                     Text(shareStrings.caption)
                         .font(.caption)
                         .foregroundStyle(.secondary)

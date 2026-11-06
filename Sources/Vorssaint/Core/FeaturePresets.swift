@@ -20,7 +20,8 @@ enum FeaturePreset: String, CaseIterable, Identifiable {
         guard !defaults.bool(forKey: DefaultsKey.hasOnboarded),
               defaults.integer(forKey: DefaultsKey.onboardingStep) == 0
         else { return }
-        let selected = FeaturePreset.essential.features
+        // G’s Mac: a fresh install starts from the Windows essentials.
+        let selected = GsMacEssential.defaultFeatures
         for feature in AppFeature.allCases {
             defaults.set(selected.contains(feature), forKey: feature.availabilityKey)
         }
@@ -113,22 +114,20 @@ extension AppFeature {
                     .map { if case .modifiers = $0 { return true }; return false } == true
             if modifierTapRuns { return .inputs }
             return pointerTapRuns ? .pointer : .idle
+        case .quickRing:
+            // ⌃ is heard from the keyboard, the clicks from the mouse; each
+            // tap exists only while its trigger is switched on.
+            let defaults = UserDefaults.standard
+            let keys = defaults.bool(forKey: DefaultsKey.quickRingControlDoubleTap)
+            let mouse = defaults.bool(forKey: DefaultsKey.quickRingControlClick)
+                || defaults.bool(forKey: DefaultsKey.quickRingMiddleClick)
+            return keys && mouse ? .inputs : keys ? .keyboard : mouse ? .mouse : .idle
         case .radialMenu:
             // A side button or the trackpad tap on any wheel keeps an input
             // tap running; shortcut-only costs nothing at rest.
             return RadialMenuSupport.opensFromMouseOrTrackpad(
                 UserDefaults.standard.data(forKey: DefaultsKey.radialMenuProfiles))
                 ? .mouse : .idle
-        case .notchNotifications, .notchGestures, .notchTimer, .notchQueue, .notchDownloads: return .idle
-        // It reads only while something is being watched, and stops on its own.
-        case .notchWatch: return .idle
-        // A blink every few seconds and a visit every few minutes, both
-        // drawn by Core Animation, with one timer waiting for the next visit.
-        case .notchMascot: return .periodic
-        case .notchAccessories: return .periodic
-        // Log changes arrive as file events; a timer keeps countdowns and
-        // limits current while the section is on.
-        case .notch, .notchCalendar, .notchLyrics, .notchLiveEqualizer, .notchAgents: return .periodic
         case .clipboardHistory, .urlCleaner, .extraBrightness,
              .monitorCPU, .monitorGPU, .monitorMemory,
              .monitorNetwork, .monitorDisk, .monitorPower, .connectedDevices:
@@ -138,8 +137,7 @@ extension AppFeature {
                 ? .keyboard : .idle
         case .brightness:
             // Following the pointer, the overlay and a finer step answer the
-            // brightness keys from a tap. Like Accessibility, the island's own
-            // notices are counted under the island.
+            // brightness keys from a tap.
             let defaults = UserDefaults.standard
             return defaults.bool(forKey: DefaultsKey.brightnessKeysEnabled)
                 || defaults.bool(forKey: DefaultsKey.brightnessOSDEnabled)

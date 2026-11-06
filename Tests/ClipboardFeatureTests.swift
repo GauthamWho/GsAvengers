@@ -71,7 +71,7 @@ enum ClipboardFeatureTests {
         var candidates: Set<String> = []
         var lookup: Set<String> = []
         var historyPanelWasKey = false
-        let ownBundleID: String? = "com.vorssaint.utils"
+        let ownBundleID: String? = "com.gauthamwho.gsmac"
         static var front: String?
         static func frontmostBundleID() -> String? { front }
     }
@@ -125,7 +125,7 @@ enum ClipboardFeatureTests {
                      "a copy naming an app that is not skipped is still recorded under that app")
         source.lookup = []
         source.candidates = ["com.apple.Safari"]
-        suite.expect(sourceCheck(declared: "com.vorssaint.utils").bundleID == nil,
+        suite.expect(sourceCheck(declared: "com.gauthamwho.gsmac").bundleID == nil,
                      "text Vorssaint copies itself, such as recognized text, is not credited to the app in front")
         source.candidates = ["com.apple.Safari"]
         suite.expect(sourceCheck(declared: "com.apple.Notes").bundleID == "com.apple.Notes",
@@ -1615,9 +1615,8 @@ enum ClipboardFeatureTests {
         let panelClipboardSource = (try? String(
             contentsOfFile: "Sources/Vorssaint/UI/MenuPanel/PanelClipboardView.swift",
             encoding: .utf8)) ?? ""
-        suite.expect(panelClipboardSource.contains("if inNotch { confirmClearAboveIsland(ids) } else { clearingIDs = ids }")
-                     && panelClipboardSource.contains("NSAlert.confirmAboveIsland("),
-               "inside the island the clipboard panel asks above it instead of hanging a sheet from it")
+        suite.expect(panelClipboardSource.contains("clearingIDs = ids"),
+               "the clipboard panel asks before clearing recent items")
         for (terminated, trusted, expected) in [
             (true, true, ["beep"]),
             (false, false, ["activate", "prompt", "activate", "beep"]),

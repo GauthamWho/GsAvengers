@@ -43,28 +43,35 @@ for arg in "$@"; do
 done
 
 if (( DEV )); then
-    APP_NAME="Vorssaint (Developer)"
-    EXECUTABLE="VorssaintDeveloper"
-    APP_BUNDLE_ID="com.vorssaint.utils.dev"
+    APP_NAME="G’s Avengers"
+    EXECUTABLE="GsMacDeveloper"
+    APP_BUNDLE_ID="com.gauthamwho.gsmac.dev"
     BUILD_VARIANT_FLAGS=(-D VORSSAINT_DEVELOPMENT)
     APP_OPTIMIZATION_FLAGS=(-Onone)
     BUILD_CONFIGURATION="debug"
 else
-    APP_NAME="Vorssaint"
-    EXECUTABLE="Vorssaint"
-    APP_BUNDLE_ID="com.vorssaint.utils"
+    APP_NAME="G’s Avengers (Release)"
+    EXECUTABLE="GsMac"
+    APP_BUNDLE_ID="com.gauthamwho.gsmac"
     BUILD_VARIANT_FLAGS=()
     APP_OPTIMIZATION_FLAGS=(-O)
     BUILD_CONFIGURATION="release"
 fi
 FAN_HELPER_ID="$APP_BUNDLE_ID.fan-control"
+# G’s Avengers ships two helper apps inside the main bundle: clipboard history
+# (Modules/GsClipboard) and mouse & keyboard sharing (Modules/GsShare/mac).
+# The main app starts them and quits them; they have no Dock icon of their own.
+CLIPBOARD_HELPER_ID="$APP_BUNDLE_ID.clipboard"
+SHARE_HELPER_ID="$APP_BUNDLE_ID.share"
+CLIPBOARD_HELPER_APP="G’s Avengers Clipboard.app"
+SHARE_HELPER_APP="G’s Avengers Sharing.app"
 # Now Playing is read through /usr/bin/perl loading this library; see
 # Sources/NowPlayingAdapter. Staged under Contents/Frameworks, signed on its own.
 NOW_PLAYING_ADAPTER_ID="$APP_BUNDLE_ID.now-playing"
 NOW_PLAYING_ADAPTER="libVorssaintNowPlaying.dylib"
 TARGET="arm64-apple-macosx14.0"
 ENTITLEMENTS="Resources/Vorssaint.entitlements"
-LEGACY_IDENTITY="Vorssaint Utils Signing"
+LEGACY_IDENTITY="GsMac Signing"
 
 developer_id_identity() {
     security find-identity -v -p codesigning 2>/dev/null \
@@ -80,8 +87,8 @@ legacy_identity_installed() {
     local probe signed=1
     # A locked keychain still lists its identities but cannot sign with them,
     # and this one is locked after every reboot; unlock it before asking.
-    security unlock-keychain -p vorssaint-signing \
-        "$HOME/Library/Keychains/vorssaint-signing.keychain-db" 2>/dev/null || true
+    security unlock-keychain -p gsmac-signing \
+        "$HOME/Library/Keychains/gsmac-signing.keychain-db" 2>/dev/null || true
     probe="$(mktemp)"
     cp /bin/echo "$probe"
     /usr/bin/codesign --force --strip-disallowed-xattrs --sign "$LEGACY_IDENTITY" "$probe" \
@@ -158,6 +165,17 @@ finalize_installed_bundle_after_child() {
 
     echo "▸ Finalizing installed signature…"
     sleep 3
+    local app
+    for app in "$bundle"/Contents/Library/LoginItems/*.app(N); do
+        if [[ -n "$devid" ]]; then
+            codesign_with_timestamp_retry --force --strip-disallowed-xattrs --options runtime --timestamp \
+                --sign "$devid" "$app"
+        elif legacy_identity_installed; then
+            /usr/bin/codesign --force --strip-disallowed-xattrs --sign "$LEGACY_IDENTITY" "$app"
+        else
+            /usr/bin/codesign --force --strip-disallowed-xattrs --sign - "$app"
+        fi
+    done
     if [[ -n "$devid" ]]; then
         [[ -f "$helper" ]] && codesign_with_timestamp_retry --force --strip-disallowed-xattrs \
             --options runtime --timestamp --identifier "$FAN_HELPER_ID" --sign "$devid" "$helper"
@@ -254,83 +272,15 @@ if (( TEST )); then
         Sources/Vorssaint/Core/QuitProtectionSupport.swift
         Sources/Vorssaint/Core/QuitProtectionStrings.swift
         Sources/Vorssaint/Core/Defaults.swift
-        Sources/Vorssaint/Core/NotchStrings.swift
-        Sources/Vorssaint/Core/NotchTourStrings.swift
-        Sources/Vorssaint/Core/NotchEditorStrings.swift
-        Sources/Vorssaint/UI/Settings/NotchSettingsTabRow.swift
-        Sources/Vorssaint/Core/NotchActivityStrings.swift
-        Sources/Vorssaint/Services/Notch/NotchTimerSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchAppFullscreen.swift
-        Sources/Vorssaint/Services/Notch/NotchTimerAlert.swift
-        Sources/Vorssaint/UI/Notch/NotchIslandAlert.swift
-        Sources/Vorssaint/Services/Notch/NotchAccessorySupport.swift
-        Sources/Vorssaint/Services/Notch/NotchAccessoryConnectionMonitor.swift
+        Sources/Vorssaint/Services/LegacyZoomCleanup.swift
         Sources/Vorssaint/Services/QuickTools/CameraPreviewSupport.swift
-        Sources/Vorssaint/Core/NotchMusicExtrasStrings.swift
-        Sources/Vorssaint/Core/NotchClipboardSizeStrings.swift
-        Sources/Vorssaint/Services/Notch/NotchLyricsSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchQueueSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchPreferredPlayer.swift
-        Sources/Vorssaint/Core/NotchFilesStrings.swift
-        Sources/Vorssaint/Core/NotchWatchStrings.swift
-        Sources/Vorssaint/Services/Notch/NotchWatchSupport.swift
-        Sources/Vorssaint/Core/NotchMascotStrings.swift
-        Sources/Vorssaint/Services/Notch/NotchMascotSupport.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarDropletMotion.swift
-        Sources/Vorssaint/Services/Notch/NotchFileToolsSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchDownloadSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchDownloadProgressObserver.swift
-        Sources/Vorssaint/Core/NotchCalendarStrings.swift
-        Sources/Vorssaint/Core/NotchNotificationStrings.swift
-        Sources/Vorssaint/Core/NotchGestureStrings.swift
-        Sources/Vorssaint/Core/NotchAgentStrings.swift
-        Sources/Vorssaint/Core/CodexAccountStrings.swift
-        Sources/Vorssaint/Core/ClaudeAccountStrings.swift
-        Sources/Vorssaint/Services/Notch/NotchAgentSupport.swift
-        Sources/Vorssaint/Core/NotchLockScreenStrings.swift
-        Sources/Vorssaint/Services/Notch/NotchLockScreenSupport.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentUsageModels.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentPricing.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentLogObject.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentLogParser.swift
-        Sources/Vorssaint/Services/AgentUsage/Harness/AgentHarnessReader.swift
-        Sources/Vorssaint/Services/AgentUsage/Harness/ClaudeReader.swift
-        Sources/Vorssaint/Services/AgentUsage/Harness/CodexReader.swift
-        Sources/Vorssaint/Services/AgentUsage/Harness/OpenCodeReader.swift
-        Sources/Vorssaint/Services/AgentUsage/Harness/CopilotReader.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentUsageSummary.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentUsageStore.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentUsageArchive.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentClaudeAppUsage.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentCLIConversation.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentClaudeServer.swift
-        Sources/Vorssaint/Services/AgentUsage/ClaudeAccountProfile.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentCodexServer.swift
-        Sources/Vorssaint/Services/AgentUsage/CodexAccountLimits.swift
-        Sources/Vorssaint/Services/AgentUsage/CodexProfileLimitsService.swift
-        Sources/Vorssaint/Services/AgentUsage/AgentOpenCodeReader.swift
-        Sources/Vorssaint/Services/Notch/NotchGestureSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchSectionPaging.swift
-        Sources/Vorssaint/Services/Notch/NotchSliderEditing.swift
-        Sources/Vorssaint/Services/Notch/NotchNotificationSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchNotificationReaderCore.swift
-        Sources/Vorssaint/Services/Notch/NotchCalendarSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchKeepAwakeSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchAudioLevelSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchVolumeKeyGate.swift
-        Sources/Vorssaint/Services/Notch/NotchMusicSupport.swift
-        Sources/Vorssaint/UI/Notch/NotchDecorativeClock.swift
-        Sources/Vorssaint/Services/Notch/NotchBrowserArtworkSupport.swift
-        Sources/Vorssaint/UI/Notch/NotchEqualizerBars.swift
-        Sources/Vorssaint/UI/Notch/NotchScrollEdgeFade.swift
-        Sources/Vorssaint/UI/Notch/NotchAgentAnimationView.swift
+        Sources/Vorssaint/Core/QuickRingStrings.swift
+        Sources/Vorssaint/Core/SharedUIStrings.swift
+        Sources/Vorssaint/UI/PlainTextLineMover.swift
+        Sources/Vorssaint/UI/SliderScrollArea.swift
+        Sources/Vorssaint/Services/QuickRing/QuickRingSupport.swift
+        Sources/Vorssaint/Core/GsMacEssentials.swift
         Sources/Vorssaint/UI/WindowVisibilityReader.swift
-        Sources/Vorssaint/Services/Notch/NotchMusicAutomationSupport.swift
-        Sources/Vorssaint/Services/Notch/NotchMusicAutomation.swift
-        Sources/Vorssaint/Services/Notch/NotchPlaybackSource.swift
-        Sources/Vorssaint/Services/Notch/NotchPlaybackCommand.swift
-        Sources/Vorssaint/Services/Notch/NotchMusicCommandWriter.swift
         Sources/Vorssaint/Core/FeatureCatalog.swift
         Sources/Vorssaint/Core/FeaturePresets.swift
         Sources/Vorssaint/Core/FeatureHubStrings.swift
@@ -568,7 +518,10 @@ if (( TEST )); then
         Sources/Vorssaint/Core/WindowDirectionalStrings.swift
         Sources/Vorssaint/Core/PointerDisplayStrings.swift
         Sources/Vorssaint/Core/GraphScaleStrings.swift
-        Sources/Vorssaint/Core/NotchLowBatteryStrings.swift
+        Sources/Vorssaint/Core/HelperAppStrings.swift
+        Sources/Vorssaint/Core/HelperWire.swift
+        Sources/Vorssaint/Core/AvengersSwitches.swift
+        Sources/Vorssaint/Core/AvengersStrings.swift
         Sources/Vorssaint/Services/CleaningMode/CleaningUnlockCounter.swift
         Sources/Vorssaint/Services/CleaningMode/CleaningMouseReleaseGate.swift
         Sources/Vorssaint/Services/Display/ExtraBrightnessSupport.swift
@@ -624,6 +577,15 @@ swiftc "${APP_OPTIMIZATION_FLAGS[@]}" -incremental -enable-batch-mode -j "$(sysc
     "${BUILD_VARIANT_FLAGS[@]}" \
     "${APP_SOURCES[@]}" -o "build/$EXECUTABLE"
 
+# G’s Mac: the release app ships without its debug symbol table (about 45 MB of
+# the binary). The symbols are kept beside it in build/ as a .dSYM, so crash
+# reports can still be read here; nothing changes in what the app does.
+if (( ! DEV )); then
+    echo "▸ Slimming release binary…"
+    dsymutil "build/$EXECUTABLE" -o "build/$EXECUTABLE.dSYM" 2>/dev/null || true
+    strip -x "build/$EXECUTABLE"
+fi
+
 echo "▸ Compiling protected fan helper…"
 swiftc -O -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" "${BUILD_VARIANT_FLAGS[@]}" \
     Sources/Vorssaint/Services/FanControl/FanControlSupport.swift \
@@ -641,14 +603,16 @@ swiftc -O -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" -emit-library \
     Sources/NowPlayingAdapter/NowPlayingAdapter.swift \
     Sources/NowPlayingAdapter/NowPlayingQueue.swift \
     Sources/NowPlayingAdapter/NowPlayingSelection.swift \
-    Sources/Vorssaint/Services/Notch/NotchPlaybackSource.swift \
-    Sources/Vorssaint/Services/Notch/NotchPlaybackCommand.swift \
+    Sources/NowPlayingAdapter/NowPlayingSource.swift \
+    Sources/NowPlayingAdapter/NowPlayingCommand.swift \
     -o "build/$NOW_PLAYING_ADAPTER"
 
 echo "▸ Generating app icon…"
 swift Tools/MakeIcon.swift build/AppIcon.iconset
 xattr -c -r build/AppIcon.iconset build/AppIcon.icns build/MenuBarIcon.png build/MenuBarIcon@2x.png build/BrandMark.png 2>/dev/null || true
 ACTOOL_BIN="$(xcrun --find actool 2>/dev/null || true)"
+# A catalog from an earlier build must never stand in for a failed compile.
+rm -f build/Assets.car
 ICON_TMP="$(mktemp -d)"
 ADAPTIVE_SKIP=""
 if [[ -z "$ACTOOL_BIN" ]]; then
@@ -677,6 +641,41 @@ if [[ -n "$ADAPTIVE_SKIP" ]]; then
     cp "$ICON_TMP/actool.log" build/actool-failure.log 2>/dev/null || true
     echo "  adaptive icon skipped: $ADAPTIVE_SKIP (Dock falls back to AppIcon.icns)"
 fi
+echo "▸ Compiling helper apps…"
+build_helper_bundle() {
+    local bundle="$1" executable="$2" identifier="$3" name="$4" extra="$5"
+    rm -rf "$bundle"
+    mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources"
+    cat > "$bundle/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleName</key><string>$name</string>
+  <key>CFBundleDisplayName</key><string>$name</string>
+  <key>CFBundleIdentifier</key><string>$identifier</string>
+  <key>CFBundleExecutable</key><string>$executable</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSUIElement</key><true/>
+  <key>NSHighResolutionCapable</key><true/>
+$extra
+</dict></plist>
+PLIST
+    printf 'APPL????' > "$bundle/Contents/PkgInfo"
+}
+swift build -c release --package-path Modules/GsClipboard --scratch-path build/helpers/clipboard >/dev/null
+CLIPBOARD_BIN="$(swift build -c release --package-path Modules/GsClipboard --scratch-path build/helpers/clipboard --show-bin-path)/GsClipboard"
+build_helper_bundle "build/helpers/$CLIPBOARD_HELPER_APP" GsClipboard "$CLIPBOARD_HELPER_ID" "G’s Avengers Clipboard" ""
+cp "$CLIPBOARD_BIN" "build/helpers/$CLIPBOARD_HELPER_APP/Contents/MacOS/GsClipboard"
+# Its sources belong to the sharing module; their own warnings are reported
+# by that module's build, not here.
+swiftc -O -suppress-warnings -target "$TARGET" -sdk "$SDK" Modules/GsShare/mac/Sources/*.swift -o build/helpers/GsShare
+build_helper_bundle "build/helpers/$SHARE_HELPER_APP" GsShare "$SHARE_HELPER_ID" "G’s Avengers Sharing" \
+    "  <key>NSLocalNetworkUsageDescription</key><string>G’s Avengers finds your Windows laptop on your home Wi-Fi so one keyboard and mouse can work on both.</string>"
+cp build/helpers/GsShare "build/helpers/$SHARE_HELPER_APP/Contents/MacOS/GsShare"
+
 echo "▸ Assembling and signing bundle…"
 STAGE_TMP="$(mktemp -d)"
 STAGE="$STAGE_TMP/$APP_NAME.app"
@@ -684,11 +683,13 @@ mkdir -p "$STAGE/Contents/MacOS" "$STAGE/Contents/Resources" \
     "$STAGE/Contents/Library/LaunchDaemons" "$STAGE/Contents/Library/LaunchServices"
 cp "build/$EXECUTABLE" "$STAGE/Contents/MacOS/$EXECUTABLE"
 cp "build/$FAN_HELPER_ID" "$STAGE/Contents/Library/LaunchServices/$FAN_HELPER_ID"
+mkdir -p "$STAGE/Contents/Library/LoginItems"
+ditto "build/helpers/$CLIPBOARD_HELPER_APP" "$STAGE/Contents/Library/LoginItems/$CLIPBOARD_HELPER_APP"
+ditto "build/helpers/$SHARE_HELPER_APP" "$STAGE/Contents/Library/LoginItems/$SHARE_HELPER_APP"
 mkdir -p "$STAGE/Contents/Frameworks"
 cp "build/$NOW_PLAYING_ADAPTER" "$STAGE/Contents/Frameworks/$NOW_PLAYING_ADAPTER"
 cp Resources/now-playing.pl "$STAGE/Contents/Resources/now-playing.pl"
-cp Resources/agent-prices.json "$STAGE/Contents/Resources/agent-prices.json"
-cp Resources/com.vorssaint.utils.fan-control.plist \
+cp Resources/com.gauthamwho.gsmac.fan-control.plist \
     "$STAGE/Contents/Library/LaunchDaemons/$FAN_HELPER_ID.plist"
 cp Resources/Info.plist "$STAGE/Contents/Info.plist"
 cp CHANGELOG.md "$STAGE/Contents/Resources/CHANGELOG.md"
@@ -705,7 +706,7 @@ if (( DEV )); then
     FAN_PLIST="$STAGE/Contents/Library/LaunchDaemons/$FAN_HELPER_ID.plist"
     /usr/libexec/PlistBuddy -c "Set :Label $FAN_HELPER_ID" "$FAN_PLIST"
     /usr/libexec/PlistBuddy -c "Set :BundleProgram Contents/Library/LaunchServices/$FAN_HELPER_ID" "$FAN_PLIST"
-    /usr/libexec/PlistBuddy -c "Delete :MachServices:com.vorssaint.utils.fan-control" "$FAN_PLIST"
+    /usr/libexec/PlistBuddy -c "Delete :MachServices:com.gauthamwho.gsmac.fan-control" "$FAN_PLIST"
     /usr/libexec/PlistBuddy -c "Add :MachServices:$FAN_HELPER_ID bool true" "$FAN_PLIST"
     # Stamp the source commit + build time so the running dev app shows (in About)
     # exactly which code it was compiled from. Lets you verify it matches HEAD before
@@ -735,10 +736,6 @@ if [[ -d Resources/Gifs ]]; then
     mkdir -p "$STAGE/Contents/Resources/Gifs"
     cp Resources/Gifs/*.gif "$STAGE/Contents/Resources/Gifs/"
 fi
-if ! cmp -s Resources/Gifs/highlights-notch.gif "$STAGE/Contents/Resources/Gifs/highlights-notch.gif"; then
-    echo "Dynamic Island tour GIF is missing or differs from the bundled copy" >&2
-    exit 1
-fi
 if [[ -d Resources/Images ]]; then
     mkdir -p "$STAGE/Contents/Resources/Images"
     cp Resources/Images/* "$STAGE/Contents/Resources/Images/"
@@ -766,6 +763,22 @@ codesign_app() {
     else
         codesign --force --strip-disallowed-xattrs --sign - "$target"
     fi
+}
+
+# The helper apps inside Contents/Library/LoginItems, signed with the same
+# identity as the main app before it is sealed.
+codesign_helper_apps() {
+    local bundle="$1" app
+    for app in "$bundle"/Contents/Library/LoginItems/*.app(N); do
+        if [[ -n "$DEVID" ]]; then
+            codesign_with_timestamp_retry --force --strip-disallowed-xattrs --options runtime --timestamp \
+                --sign "$DEVID" "$app"
+        elif legacy_identity_installed; then
+            codesign --force --strip-disallowed-xattrs --sign "$LEGACY_IDENTITY" "$app"
+        else
+            codesign --force --strip-disallowed-xattrs --sign - "$app"
+        fi
+    done
 }
 
 codesign_fan_helper() {
@@ -809,6 +822,7 @@ sign_bundle() {
     fi
     [[ -f "$helper" ]] && codesign_fan_helper "$helper"
     [[ -f "$adapter" ]] && codesign_now_playing_adapter "$adapter"
+    codesign_helper_apps "$bundle"
     codesign_app "$bundle"
 
     # If local filesystem metadata invalidates the first signature, sign once
@@ -818,6 +832,7 @@ sign_bundle() {
         xattr -c -r "$bundle" 2>/dev/null || true
         [[ -f "$helper" ]] && codesign_fan_helper "$helper"
         [[ -f "$adapter" ]] && codesign_now_playing_adapter "$adapter"
+        codesign_helper_apps "$bundle"
         codesign_app "$bundle"
     fi
     [[ -f "$executable" ]] && codesign --verify --strict "$executable"
@@ -911,18 +926,6 @@ fi
 if (( INSTALL )); then
     echo "▸ Installing into /Applications…"
     stop_process "$EXECUTABLE"
-    # Only an official install replaces the pre-rename official apps. The
-    # Developer variant must coexist with them just as it does with Vorssaint.
-    if (( ! DEV )); then
-        for legacy in "Vorss:Vorss" "Vorssaint Utils:VorssaintUtils"; do
-            name="${legacy%%:*}"; proc="${legacy##*:}"
-            if [[ -d "/Applications/$name.app" ]]; then
-                stop_process "$proc"
-                rm -rf "/Applications/$name.app"
-                echo "  (legacy $name.app removed)"
-            fi
-        done
-    fi
     INSTALL_DEST="/Applications/$APP_NAME.app"
     rm -rf "$INSTALL_DEST"
     ditto --noextattr --noqtn "$STAGE" "$INSTALL_DEST"

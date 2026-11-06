@@ -1,33 +1,30 @@
-# Security Policy
+# Security policy
 
-Thanks for helping keep Vorssaint and the people who use it safe.
+## Report a problem privately
 
-## Reporting a vulnerability
+Please do not open a public issue for a security problem.
 
-Please report security vulnerabilities in private. Do not open a public issue, pull request or discussion for them.
+- **[Report a vulnerability privately](https://github.com/GauthamWho/GsAvengers/security/advisories/new)** (GitHub private vulnerability reporting).
+- Include what you found, how to reproduce it, the G's Avengers version and your macOS / Windows versions.
 
-Use GitHub's private vulnerability reporting for this repository.
+You will get a reply as soon as possible. Please allow time for a fix before talking about it in public. Credit is given gladly if you want it.
 
-- **[Report a vulnerability privately](https://github.com/vorssaint/vorssaint-utils/security/advisories/new)**
+## What is in scope
 
-That opens a private security advisory that only you and the maintainer can see.
+- The Mac app and its two helpers (sharing, clipboard).
+- The Windows app (`Modules/GsShare/windows`).
+- The sharing link: discovery, pairing, encryption ([protocol](Modules/GsShare/docs/PROTOCOL.md)).
 
-When you write it up, please include as much as you can.
+## How the sharing link is protected
 
-- A description of the issue and the impact it could have.
-- Steps to reproduce, or a proof of concept.
-- The Vorssaint version from Settings under About and your macOS version.
+- Works only on your home network: both sides ignore computers with non-private (internet) addresses. No cloud, no relay, no account.
+- New computers pair only after you compare the same 6-digit number on both screens and click **Pair** on both.
+- Every message is encrypted and signed: P-256 key exchange per connection, AES-256-CBC + HMAC-SHA256, a counter against replayed messages.
+- Before pairing, only pairing messages are accepted; no mouse, keyboard or clipboard data.
+- Nothing you type is written to disk or sent anywhere except to your paired computer.
 
-## What to expect
-
-- This is a community project looked after on a best effort basis, so please allow reasonable time for a reply and a fix.
-- Please give the maintainer a chance to ship a fix before you talk about the issue in public. That is what coordinated disclosure means.
-- Credit goes gladly to reporters who want it.
+The last review is in [SECURITY-REVIEW.md](SECURITY-REVIEW.md).
 
 ## Supported versions
 
-Security fixes land on the latest released version. Before you report, please make sure you can reproduce the issue on the most recent release.
-
-## Scope
-
-Vorssaint runs locally and ships as a signed and notarized macOS app. The reports that matter most are the ones that could affect the integrity of the app or its self update flow, or that could let the app's permissions be misused. Issues in the outside services the app merely talks to, like GitHub's releases API or the speed test endpoint, are best taken to those providers.
+Fixes land on the latest release.

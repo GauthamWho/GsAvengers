@@ -179,8 +179,8 @@ final class AirPlayRouteManager: NSObject, ObservableObject {
     private var pickerGeneration = 0
 
     /// Opens the system's speaker list at the pointer, where the choice that
-    /// asked for it was made: an app's output menu in the panel, Settings or
-    /// the island. A transparent window anchors it there.
+    /// asked for it was made: an app's output menu in the panel or
+    /// Settings. A transparent window anchors it there.
     func presentPicker() {
         // Nothing to pick with, and no reason to create the anchor window.
         guard isAvailable else { return }
@@ -196,7 +196,7 @@ final class AirPlayRouteManager: NSObject, ObservableObject {
         win.isOpaque = false
         win.backgroundColor = .clear
         win.alphaValue = 0.01 // Invisible so no icon shows on screen
-        win.level = .popUpMenu // Appears on top of all panels and notch, never underneath
+        win.level = .popUpMenu // Appears on top of all panels, never underneath
         win.hasShadow = false
         win.isReleasedWhenClosed = false
         // Over a full-screen app too, like the panel's own anchor.
@@ -721,7 +721,7 @@ final class AirPlayStreamRegistration: @unchecked Sendable {
 /// of them never read the mixing source at once. `stop()` returns only after a
 /// step that is already running has finished, and no step starts afterwards.
 final class AirPlayFeedDriver: @unchecked Sendable {
-    static let sharedQueue = DispatchQueue(label: "com.vorssaint.utils.airplay.render", qos: .userInitiated)
+    static let sharedQueue = DispatchQueue(label: "com.gauthamwho.gsmac.airplay.render", qos: .userInitiated)
     private static let queueKey = DispatchSpecificKey<Void>()
 
     private let queue: DispatchQueue

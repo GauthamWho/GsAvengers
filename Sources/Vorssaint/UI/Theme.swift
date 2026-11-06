@@ -46,17 +46,6 @@ enum PanelMetricColor {
     }
 }
 
-private struct NotchPresentationKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-extension EnvironmentValues {
-    var notchPresentation: Bool {
-        get { self[NotchPresentationKey.self] }
-        set { self[NotchPresentationKey.self] = newValue }
-    }
-}
-
 enum PanelSurface {
     /// Whether the menu popover hosts the panel across its whole balloon, so the
     /// panel's own surface can reach the arrow (#1030). Only macOS 26 lays the
@@ -146,12 +135,8 @@ private struct PanelCardModifier: ViewModifier {
     var interactive: Bool
     var padded = true
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.notchPresentation) private var notchPresentation
 
     func body(content: Content) -> some View {
-        if notchPresentation {
-            content.padding(padded ? 12 : 0).modifier(NotchControlSurface(cornerRadius: 18, interactive: interactive))
-        } else {
         content
             .padding(padded ? 10 : 0)
             .background(
@@ -162,14 +147,11 @@ private struct PanelCardModifier: ViewModifier {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(PanelSurface.border(for: colorScheme), lineWidth: 0.7)
             )
-        }
     }
 }
 
 private struct PanelGlassSurface: View {
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.notchPresentation) private var notchPresentation
-    @Environment(\.notchGlassSurface) private var notchGlassSurface
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @AppStorage(DefaultsKey.liquidGlassEnabled) private var liquidGlassEnabled = false
 
@@ -183,9 +165,7 @@ private struct PanelGlassSurface: View {
         // the outline AppKit already draws. Before macOS 26, inset content uses
         // the native popover material alone: a separate rounded card cannot
         // follow the balloon's corners and leaves a second outline (#2225).
-        if notchPresentation {
-            Rectangle().fill(notchGlassSurface ? Color.clear : .black)
-        } else if PanelSurface.popoverHostsFullSizeContent {
+        if PanelSurface.popoverHostsFullSizeContent {
             surface.ignoresSafeArea()
         } else {
             Color.clear

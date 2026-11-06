@@ -18,8 +18,8 @@ import QuartzCore
 /// panel's headroom, so the overlay bootstraps itself: it starts with a
 /// small boost and ramps up as the reported headroom rises.
 ///
-/// Rendering uses public APIs; window placement uses the island's runtime-
-/// resolved private Space helper, with the previous placement as a fallback.
+/// Rendering uses public APIs; window placement uses a runtime-resolved
+/// private Space helper (`OverlaySpace`), with the previous placement as a fallback.
 /// macOS controls the panel: thermal or power pressure can shrink the
 /// headroom at any time and the poll adapts.
 /// The overlay dies with the app, so no display state can outlive a crash.
@@ -45,7 +45,7 @@ final class ExtraBrightnessService: ObservableObject {
     /// dropped out on XDR hardware when only the first frame was shown).
     private var triggerWindow: NSWindow?
     private var triggerLayer: CAMetalLayer?
-    /// A Space of the overlay's own (the island's helper), holding every
+    /// A Space of the overlay's own, holding every
     /// window above. On macOS 27 Mission Control drops each window of the
     /// current desktop that a larger window above covers, see-through or
     /// not, so any screen-sized overlay on the desktop emptied that desktop's
@@ -53,7 +53,7 @@ final class ExtraBrightnessService: ObservableObject {
     /// no desktop and is never counted. Rebuilt with the windows, which must
     /// join before they first show. Nil when the symbols are missing: the
     /// windows then stay on every desktop as before.
-    private var overlaySpace: NotchOverlaySpace?
+    private var overlaySpace: OverlaySpace?
     private var metalDevice: MTLDevice?
     private var commandQueue: MTLCommandQueue?
     private var pollTimer: Timer?
@@ -347,7 +347,7 @@ final class ExtraBrightnessService: ObservableObject {
         overlayLayers = []
         triggerWindow?.orderOut(nil)
         overlaySpace?.close()
-        overlaySpace = NotchOverlaySpace()
+        overlaySpace = OverlaySpace()
 
         guard let device = MTLCreateSystemDefaultDevice(),
               let queue = device.makeCommandQueue() else { return }

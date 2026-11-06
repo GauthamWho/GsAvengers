@@ -34,7 +34,6 @@ enum PreferencesFeatureTests {
                "a screenshot subfolder name is a pattern rather than a path, so it still follows settings backups")
         suite.expect(!SettingsBackupSupport.exportKeys().contains(DefaultsKey.commandBarFileScopes)
             && !SettingsBackupSupport.exportKeys().contains(DefaultsKey.whatsAppOrganizerDestinationPath)
-            && !SettingsBackupSupport.exportKeys().contains(DefaultsKey.notchDownloadsFolderBookmark)
             && !SettingsBackupSupport.exportKeys().contains(DefaultsKey.wallpaperOwnBookmarks)
             && !SettingsBackupSupport.exportKeys().contains(DefaultsKey.mediaImageWatermarkLogoPath),
                "every chosen folder already excluded from backups stays excluded")
@@ -46,69 +45,36 @@ enum PreferencesFeatureTests {
                "the app follows the system appearance until the user picks a side")
         suite.expect(registeredDefaults[DefaultsKey.liquidGlassEnabled] as? Bool == false,
                "liquid glass in other windows is opt-in")
-        suite.expect(registeredDefaults[DefaultsKey.notchLiquidGlassEnabled] as? Bool == false,
-               "liquid glass in Dynamic Island is opt-in")
-        suite.expect(SettingsBackupSupport.exportKeys().contains(DefaultsKey.liquidGlassEnabled),
-               "liquid glass in other windows follows settings backups")
-        suite.expect(SettingsBackupSupport.exportKeys().contains(DefaultsKey.notchLiquidGlassEnabled),
-               "liquid glass in Dynamic Island follows settings backups")
-        suite.expect(SettingsBackupSupport.keysToClear(whenImporting: [
-            DefaultsKey.notchEnabled: true
-        ]).contains(DefaultsKey.notchLiquidGlassEnabled)
-            && !SettingsBackupSupport.keysToClear(whenImporting: [:])
-                .contains(DefaultsKey.notchLiquidGlassEnabled),
-               "old backups with island settings can migrate their glass choice, while older backups keep the local choice")
-        let glassDomain = "vorss.tests.glass-migration.\(UUID().uuidString)"
-        let glassDefaults = UserDefaults(suiteName: glassDomain)!
-        defer { glassDefaults.removePersistentDomain(forName: glassDomain) }
-        Defaults.migrateLiquidGlassIsland(in: glassDefaults, domainName: glassDomain)
-        suite.expect(glassDefaults.persistentDomain(forName: glassDomain)?[
-            DefaultsKey.notchLiquidGlassEnabled] as? Bool == false,
-               "a new installation saves the island glass choice as off")
-        glassDefaults.set(true, forKey: DefaultsKey.liquidGlassEnabled)
-        Defaults.migrateLiquidGlassIsland(in: glassDefaults, domainName: glassDomain)
-        suite.expect(!glassDefaults.bool(forKey: DefaultsKey.notchLiquidGlassEnabled),
-               "turning on glass for other windows after the first launch leaves the island off")
-        glassDefaults.removeObject(forKey: DefaultsKey.notchLiquidGlassEnabled)
-        Defaults.migrateLiquidGlassIsland(in: glassDefaults, domainName: glassDomain)
-        suite.expect(glassDefaults.bool(forKey: DefaultsKey.notchLiquidGlassEnabled),
-               "an existing glass preference is copied to Dynamic Island")
-        glassDefaults.set(false, forKey: DefaultsKey.liquidGlassEnabled)
-        Defaults.migrateLiquidGlassIsland(in: glassDefaults, domainName: glassDomain)
-        suite.expect(glassDefaults.bool(forKey: DefaultsKey.notchLiquidGlassEnabled),
-               "changing other windows does not change an already migrated island")
-        glassDefaults.set(false, forKey: DefaultsKey.notchLiquidGlassEnabled)
-        glassDefaults.set(true, forKey: DefaultsKey.liquidGlassEnabled)
-        Defaults.migrateLiquidGlassIsland(in: glassDefaults, domainName: glassDomain)
-        suite.expect(!glassDefaults.bool(forKey: DefaultsKey.notchLiquidGlassEnabled),
-               "an explicit island choice survives later launches")
-        let companionDomain = "vorss.tests.companion-beta.\(UUID().uuidString)"
-        let companionDefaults = UserDefaults(suiteName: companionDomain)!
-        defer { companionDefaults.removePersistentDomain(forName: companionDomain) }
-        // Setup writes every feature's availability, the companion's as off.
-        companionDefaults.set(true, forKey: AppFeature.commandBar.availabilityKey)
-        companionDefaults.set(false, forKey: AppFeature.notchMascot.availabilityKey)
-        companionDefaults.set(false, forKey: AppFeature.notch.availabilityKey)
-        Defaults.installCompanionForBetaCommandBar(in: companionDefaults, isBeta: true)
-        let waitsForSetup = !companionDefaults.bool(forKey: AppFeature.notchMascot.availabilityKey)
-        companionDefaults.set(true, forKey: DefaultsKey.hasOnboarded)
-        Defaults.installCompanionForBetaCommandBar(in: companionDefaults, isBeta: false)
-        let stableUntouched = !companionDefaults.bool(forKey: AppFeature.notchMascot.availabilityKey)
-        Defaults.installCompanionForBetaCommandBar(in: companionDefaults, isBeta: true)
-        let noIsland = !companionDefaults.bool(forKey: AppFeature.notchMascot.availabilityKey)
-            && !companionDefaults.bool(forKey: DefaultsKey.notchMascotBetaInstalled)
-        companionDefaults.set(true, forKey: AppFeature.notch.availabilityKey)
-        Defaults.installCompanionForBetaCommandBar(in: companionDefaults, isBeta: true)
-        let installed = companionDefaults.bool(forKey: AppFeature.notchMascot.availabilityKey)
-            && companionDefaults.bool(forKey: DefaultsKey.notchMascotEnabled)
-        companionDefaults.set(false, forKey: AppFeature.notchMascot.availabilityKey)
-        Defaults.installCompanionForBetaCommandBar(in: companionDefaults, isBeta: true)
-        let keptOut = !companionDefaults.bool(forKey: AppFeature.notchMascot.availabilityKey)
-        companionDefaults.removeObject(forKey: DefaultsKey.notchMascotBetaInstalled)
-        companionDefaults.set(false, forKey: AppFeature.commandBar.availabilityKey)
-        let noCommandBar = !Defaults.installsCompanionForBeta(in: companionDefaults, isBeta: true)
-        suite.expect(waitsForSetup && stableUntouched && noIsland && installed && keptOut && noCommandBar,
-                     "a beta installs the companion once for Command Bar users with the island after setup, even over setup's off, and leaves it out once uninstalled")
+        // The notch is gone: its saved choices leave once, and nothing else does.
+        let notchDomain = "vorss.tests.removed-notch.\(UUID().uuidString)"
+        let notchDefaults = UserDefaults(suiteName: notchDomain)!
+        defer { notchDefaults.removePersistentDomain(forName: notchDomain) }
+        for key in ["notchEnabled", "notchLiquidGlassEnabled", "featureAvailable.notch", "featureAvailable.notchMascot",
+                    "panelControlNotch", "brightnessUpdatePromptState", "updateHighlightsSeenVersion"] {
+            notchDefaults.set(true, forKey: key)
+        }
+        notchDefaults.set(true, forKey: DefaultsKey.shelfEnabled)
+        notchDefaults.set(true, forKey: AppFeature.quickRing.availabilityKey)
+        Defaults.removeNotchSettings(in: notchDefaults, domainName: notchDomain)
+        let left = notchDefaults.persistentDomain(forName: notchDomain) ?? [:]
+        suite.expect(Set(left.keys) == [DefaultsKey.shelfEnabled, AppFeature.quickRing.availabilityKey],
+                     "removing the notch clears its own keys and keeps every other setting")
+        suite.expect(!SettingsBackupSupport.exportKeys().contains { Defaults.isRemovedNotchSetting($0) },
+                     "backups no longer carry any notch setting")
+        let zoomDomain = "vorss.tests.removed-zoom.\(UUID().uuidString)"
+        let zoomDefaults = UserDefaults(suiteName: zoomDomain)!
+        defer { zoomDefaults.removePersistentDomain(forName: zoomDomain) }
+        for key in ["smartZoomStrength", "smartZoomShortcut", "featureAvailable.smartZoom"] {
+            zoomDefaults.set(true, forKey: key)
+        }
+        zoomDefaults.set(["wasZoomed": false], forKey: LegacyZoomCleanup.markerKey)
+        zoomDefaults.set(true, forKey: DefaultsKey.shelfEnabled)
+        Defaults.removeSmartZoomSettings(in: zoomDefaults, domainName: zoomDomain)
+        let zoomLeft = zoomDefaults.persistentDomain(forName: zoomDomain) ?? [:]
+        suite.expect(Set(zoomLeft.keys) == [DefaultsKey.shelfEnabled, LegacyZoomCleanup.markerKey],
+                     "removing Smart Zoom clears its settings but leaves the restore marker for the one-time cleanup")
+        suite.expect(!SettingsBackupSupport.exportKeys().contains { LegacyZoomCleanup.isRemovedSetting($0) },
+                     "backups no longer carry any Smart Zoom setting")
         suite.expect(AppAppearance.sanitized(nil) == .system
                 && AppAppearance.sanitized("nonsense") == .system,
                "an unknown stored appearance falls back to the system one")

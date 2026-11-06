@@ -26,7 +26,6 @@ struct FeatureHubSettings: View {
     /// gives an ordinary page anchor.
     @State private var highlightedFeature: AppFeature?
     @State private var expandedGroups = Set(FeatureGroup.allCases)
-    @State private var islandExtensionsExpanded = true
     @State private var presetsExpanded = true
     /// Installed switches never once turned on, read when the page appears
     /// and after every install change rather than on every redraw.
@@ -88,9 +87,8 @@ struct FeatureHubSettings: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background { FeatureHubScrollAnchor() }
                 if tab == .features {
-                    dynamicIslandCard
                     presetsCard
-                    ForEach(FeatureGroup.allCases.filter { $0 != .dynamicIsland }, id: \.self) { group in
+                    ForEach(FeatureGroup.allCases, id: \.self) { group in
                         groupCard(group)
                     }
                     VStack(alignment: .leading, spacing: 4) {
@@ -141,11 +139,7 @@ struct FeatureHubSettings: View {
         router.consumeFeatureTarget(id: request.id)
         revealID = request.id
         if tab == .permissions { tab = .features }
-        if request.feature.group == .dynamicIsland {
-            if request.feature != .notch { islandExtensionsExpanded = true }
-        } else {
-            expandedGroups.insert(request.feature.group)
-        }
+        expandedGroups.insert(request.feature.group)
         DispatchQueue.main.async {
             guard self.revealID == request.id else { return }
             proxy.scrollTo(request.feature.group, anchor: .top)
@@ -342,37 +336,6 @@ struct FeatureHubSettings: View {
         }
     }
 
-    /// The island stays near the top, with its additions in a group the user
-    /// can close when they want a shorter catalog.
-    private var dynamicIslandCard: some View {
-        let members = AppFeature.features(in: .dynamicIsland)
-        let installed = members.filter(\.isAvailable).count
-        return SettingsCard {
-            groupHeader(.dynamicIsland, installed: installed, total: members.count)
-            FeatureHubRow(feature: .notch, hub: hub,
-                          isHighlighted: highlightedFeature == .notch)
-                .id(AppFeature.notch)
-            DisclosureGroup(
-                FeatureStrings.notch(l10n.language).modules,
-                isExpanded: $islandExtensionsExpanded
-            ) {
-                if islandExtensionsExpanded {
-                    VStack(spacing: 0) {
-                        ForEach(members.filter { $0 != .notch }, id: \.self) { feature in
-                            FeatureHubRow(feature: feature, hub: hub,
-                                          isHighlighted: highlightedFeature == feature)
-                                .id(feature)
-                            if feature != members.last {
-                                Divider().padding(.leading, 8)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .id(FeatureGroup.dynamicIsland)
-    }
-
     /// Groups start open and are measured before scrolling begins.
     /// Closing a group removes its feature rows until the user reopens it.
     private func groupCard(_ group: FeatureGroup) -> some View {
@@ -442,7 +405,6 @@ struct FeatureHubSettings: View {
         case .sound: return hub.groupSound
         case .energyDisplay: return hub.groupEnergyDisplay
         case .tools: return hub.groupTools
-        case .dynamicIsland: return FeatureStrings.notch(l10n.language).title
         case .monitor: return hub.groupMonitor
         }
     }
@@ -589,7 +551,6 @@ private extension FeatureGroup {
         case .sound: return "speaker.wave.2.fill"
         case .energyDisplay: return "bolt.fill"
         case .tools: return "wrench.and.screwdriver.fill"
-        case .dynamicIsland: return AppFeature.notch.symbolName
         case .monitor: return "chart.line.uptrend.xyaxis"
         }
     }
@@ -654,7 +615,6 @@ private struct PresetCard: View {
 private struct FeatureHubRow: View {
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var features = FeatureRuntime.shared
-    @State private var confirmingExtensions = false
     @State private var hovering = false
     @State private var showingMetadata = false
     let feature: AppFeature
@@ -665,13 +625,6 @@ private struct FeatureHubRow: View {
 
     private var opensSettings: Bool { installed && feature.hasNavigableSettingsDestination }
 
-    /// Extensions still installed under this row's feature; only the Dynamic
-    /// Island has any. They do nothing without it, so its uninstall asks
-    /// whether they leave too.
-    private var installedExtensions: [AppFeature] {
-        feature == .notch ? AppFeature.dynamicIslandExtensions.filter(\.isAvailable) : []
-    }
-
     /// Set only while this Mac cannot run the feature and it is not yet
     /// installed, so an install that predates the check keeps an ordinary
     /// row with its settings and Uninstall reachable.
@@ -679,7 +632,6 @@ private struct FeatureHubRow: View {
 
     private var accessibilityTitle: String {
         let title = feature.hubTitle(l10n.s, hub: hub)
-        if feature == .notch { return "\(title). \(hub.experimentalBadge)" }
         return feature.isBeta ? "\(title). \(l10n.s.betaFeatureWarning)" : title
     }
 
@@ -733,15 +685,6 @@ private struct FeatureHubRow: View {
         .padding(.horizontal, 8)
         .background(rowFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .onHover { hovering = $0 }
-        .alert(hub.notchUninstallTitle, isPresented: $confirmingExtensions) {
-            Button(hub.notchUninstallWithExtensions) { flip(to: false, alongside: installedExtensions) }
-            Button(hub.notchUninstallKeepExtensions) { flip(to: false) }
-            Button(hub.presetConfirmCancel, role: .cancel) {}
-        } message: {
-            Text(String(format: hub.notchUninstallMessageFormat,
-                        installedExtensions.map { $0.hubTitle(l10n.s, hub: hub) }
-                            .joined(separator: ", ")))
-        }
     }
 
     private var rowFill: Color {
@@ -755,15 +698,6 @@ private struct FeatureHubRow: View {
                 HStack(spacing: 6) {
                     Text(feature.hubTitle(l10n.s, hub: hub))
                         .foregroundStyle(installed ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-                    if feature == .notch {
-                        Text(hub.experimentalBadge.uppercased())
-                            .font(.system(size: 9, weight: .bold))
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .foregroundStyle(.orange)
-                            .background(Capsule().fill(Color.orange.opacity(0.14)))
-                            .accessibilityHidden(true)
-                    }
                     if feature.isBeta {
                         Text(l10n.s.betaBadge)
                             .font(.system(size: 8, weight: .bold))
@@ -830,7 +764,7 @@ private struct FeatureHubRow: View {
     private var installAction: some View {
         if installed {
             Button(hub.uninstallButton) {
-                if installedExtensions.isEmpty { flip(to: false) } else { confirmingExtensions = true }
+                flip(to: false)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
@@ -855,9 +789,9 @@ private struct FeatureHubRow: View {
         }
     }
 
-    private func flip(to install: Bool, alongside companions: [AppFeature] = []) {
+    private func flip(to install: Bool) {
         withAnimation(.easeOut(duration: 0.22)) {
-            FeatureRuntime.shared.setAvailable([feature] + companions, install)
+            FeatureRuntime.shared.setAvailable([feature], install)
         }
     }
 }
@@ -931,7 +865,6 @@ struct PermissionsPortalSections: View {
             case .unknown: return .unknown
             }
         case .automationFinder: return automationStatus(.finder)
-        case .automationPlayback: return .unknown
         case .audioCapture:
             // No public check exists for system audio capture; the mixer
             // reports a failed tap, which is the one readable signal.
@@ -945,8 +878,6 @@ struct PermissionsPortalSections: View {
             case .denied, .undetermined: return .missing
             case .unknown: return .unknown
             }
-        case .calendar:
-            return permissions.calendarAccess == .fullAccess ? .granted : .missing
         case .camera:
             switch permissions.camera {
             case .granted: return .granted
@@ -1074,11 +1005,9 @@ private struct PermissionPortalRow: View {
         switch permission {
         case .accessibility, .screenRecording, .fullDiskAccess: return true
         case .notifications: return Permissions.shared.notifications == .undetermined
-        case .calendar: return Permissions.shared.calendarAccess == .notDetermined
-            || Permissions.shared.calendarAccess == .writeOnly
         case .camera: return Permissions.shared.camera == .undetermined
         case .microphone: return Permissions.shared.microphone == .undetermined
-        case .filesAndFolders, .automationFinder, .automationPlayback, .audioCapture,
+        case .filesAndFolders, .automationFinder, .audioCapture,
              .appManagement: return false
         }
     }
@@ -1093,10 +1022,9 @@ private struct PermissionPortalRow: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 Permissions.shared.refresh()
             }
-        case .calendar: Permissions.shared.requestCalendar()
         case .camera: Permissions.shared.requestCamera()
         case .microphone: Permissions.shared.requestMicrophone()
-        case .filesAndFolders, .automationFinder, .automationPlayback, .audioCapture,
+        case .filesAndFolders, .automationFinder, .audioCapture,
              .appManagement:
             break
         }
@@ -1109,10 +1037,9 @@ private struct PermissionPortalRow: View {
         case .fullDiskAccess: Permissions.shared.openFullDiskAccessSettings()
         case .filesAndFolders: Permissions.shared.openFilesAndFoldersSettings()
         case .notifications: Permissions.shared.openNotificationSettings()
-        case .automationFinder, .automationPlayback: Permissions.shared.openAutomationSettings()
+        case .automationFinder: Permissions.shared.openAutomationSettings()
         case .audioCapture: Permissions.shared.openAudioCaptureSettings()
         case .microphone: Permissions.shared.openMicrophoneSettings()
-        case .calendar: Permissions.shared.openCalendarSettings()
         case .camera: Permissions.shared.openCameraSettings()
         case .appManagement: Permissions.shared.openAppManagementSettings()
         }
@@ -1124,7 +1051,7 @@ private struct PermissionPortalRow: View {
 extension AppFeature {
     /// What an option that needs this feature says while it is uninstalled.
     func enableReason(_ l10n: L10n) -> String {
-        FeatureStrings.notchEditor(l10n.language).enableFeature(hubTitle(l10n.s, hub: FeatureStrings.hub(l10n.language)))
+        FeatureStrings.shared(l10n.language).enableFeature(hubTitle(l10n.s, hub: FeatureStrings.hub(l10n.language)))
     }
 
     /// Features, at this feature, for an option that needs it.
@@ -1186,19 +1113,6 @@ extension AppFeature {
         case .screenRecorder: return FeatureStrings.recorder(language).pageTitle
         case .cameraPreview: return FeatureStrings.cameraPreview(language).pageTitle
         case .wallpaper: return FeatureStrings.wallpaper(language).pageTitle
-        case .notchGestures: return FeatureStrings.notchGestures(language).title
-        case .notchTimer: return FeatureStrings.notchActivities(language).timer
-        case .notchAccessories: return FeatureStrings.notchActivities(language).accessories
-        case .notchNotifications: return FeatureStrings.notchNotifications(language).title
-        case .notchLyrics: return FeatureStrings.notchMusicExtras(language).lyrics
-        case .notchQueue: return FeatureStrings.notchMusicExtras(language).queue
-        case .notchLiveEqualizer: return FeatureStrings.notchMusicExtras(language).liveEqualizer
-        case .notchDownloads: return FeatureStrings.notchFiles(language).downloadsTitle
-        case .notchCalendar: return FeatureStrings.notchCalendar(language).title
-        case .notchAgents: return FeatureStrings.notchAgents(language).title
-        case .notchWatch: return FeatureStrings.notchWatch(language).title
-        case .notchMascot: return FeatureStrings.notchMascot(language).title
-        case .notch: return FeatureStrings.notch(language).title
         case .radialMenu: return FeatureStrings.radialMenu(language).pageTitle
         case .scratchpad: return FeatureStrings.scratchpad(language).pageTitle
         case .commandBar: return FeatureStrings.commandBar(language).pageTitle
@@ -1208,6 +1122,7 @@ extension AppFeature {
         case .uninstaller: return s.uninstallerName
         case .killProcess: return FeatureStrings.killProcess(language).pageTitle
         case .portManager: return FeatureStrings.portManager(language).title
+        case .quickRing: return FeatureStrings.quickRing(language).title
         case .homebrew: return s.homebrewName
         case .appUpdates: return FeatureStrings.appUpdates(language).pageTitle
         case .monitorCPU: return s.monitorShowCPU
@@ -1272,19 +1187,6 @@ extension AppFeature {
         case .screenRecorder: return FeatureStrings.recorder(L10n.shared.language).hubDescription
         case .cameraPreview: return FeatureStrings.cameraPreview(L10n.shared.language).hubDescription
         case .wallpaper: return FeatureStrings.wallpaper(L10n.shared.language).hubDescription
-        case .notchGestures: return FeatureStrings.notchGestures(L10n.shared.language).description
-        case .notchTimer: return FeatureStrings.notchActivities(L10n.shared.language).timerDescription
-        case .notchAccessories: return FeatureStrings.notchActivities(L10n.shared.language).accessoryDescription
-        case .notchNotifications: return FeatureStrings.notchNotifications(L10n.shared.language).description
-        case .notchLyrics: return FeatureStrings.notchMusicExtras(L10n.shared.language).lyricsDescription
-        case .notchQueue: return FeatureStrings.notchMusicExtras(L10n.shared.language).queueDescription
-        case .notchLiveEqualizer: return FeatureStrings.notchMusicExtras(L10n.shared.language).liveEqualizerDescription
-        case .notchDownloads: return FeatureStrings.notchFiles(L10n.shared.language).downloadsDescription
-        case .notchCalendar: return FeatureStrings.notchCalendar(L10n.shared.language).description
-        case .notchAgents: return FeatureStrings.notchAgents(L10n.shared.language).hubDescription
-        case .notchWatch: return FeatureStrings.notchWatch(L10n.shared.language).description
-        case .notchMascot: return FeatureStrings.notchMascot(L10n.shared.language).hubDescription
-        case .notch: return FeatureStrings.notch(L10n.shared.language).description
         case .radialMenu: return FeatureStrings.radialMenu(L10n.shared.language).hubDescription
         case .scratchpad: return FeatureStrings.scratchpad(L10n.shared.language).hubDescription
         case .commandBar: return FeatureStrings.commandBar(L10n.shared.language).hubDescription
@@ -1300,6 +1202,7 @@ extension AppFeature {
         case .uninstaller: return hub.descUninstaller
         case .killProcess: return FeatureStrings.killProcess(L10n.shared.language).hubDescription
         case .portManager: return FeatureStrings.portManager(L10n.shared.language).hubDescription
+        case .quickRing: return FeatureStrings.quickRing(L10n.shared.language).hubDescription
         case .homebrew: return hub.descHomebrew
         case .appUpdates: return FeatureStrings.appUpdates(L10n.shared.language).hubDescription
         case .monitorCPU: return hub.descMonitorCPU
@@ -1323,10 +1226,8 @@ extension AppPermission {
         case .filesAndFolders: return hub.permFilesAndFolders
         case .notifications: return hub.permNotifications
         case .automationFinder: return hub.permAutomationFinder
-        case .automationPlayback: return FeatureStrings.notchMusicExtras(L10n.shared.language).automationPermission
         case .audioCapture: return hub.permAudioCapture
         case .microphone: return FeatureStrings.recorder(L10n.shared.language).microphonePermissionName
-        case .calendar: return FeatureStrings.notchCalendar(L10n.shared.language).title
         case .camera: return FeatureStrings.cameraPreview(L10n.shared.language).permName
         case .appManagement: return FeatureStrings.settingsCategories(L10n.shared.language).appManagement
         }
@@ -1340,11 +1241,9 @@ extension AppPermission {
         case .filesAndFolders: return hub.explainFilesAndFolders
         case .notifications: return hub.explainNotifications
         case .automationFinder: return hub.explainAutomationFinder
-        case .automationPlayback: return FeatureStrings.notchMusicExtras(L10n.shared.language).automationExplanation
         case .audioCapture: return hub.explainAudioCapture
         case .microphone:
             return FeatureStrings.recorder(L10n.shared.language).microphonePermissionExplain
-        case .calendar: return FeatureStrings.notchCalendar(L10n.shared.language).permission
         case .camera: return FeatureStrings.cameraPreview(L10n.shared.language).permExplain
         case .appManagement: return hub.explainAppManagement
         }

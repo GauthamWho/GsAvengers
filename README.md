@@ -1,272 +1,172 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/logo-dark.svg">
-    <img src="docs/assets/readme/logo.svg" width="220" alt="Vorssaint logo">
-  </picture>
+  <img src="docs/readme/logo.png" width="128" alt="G's Avengers logo: GsA on a black tile">
 </p>
 
-<h1 align="center">Vorssaint</h1>
+<h1 align="center">G's Avengers</h1>
+
+<p align="center"><b>Your Windows habits, your clipboard and your Windows keyboard & mouse, all on your Mac, from one menu-bar icon.</b></p>
 
 <p align="center">
-  One menu bar icon doing the job of a dozen paid Mac apps.<br>
-  Install only what you use.
+  <a href="https://github.com/GauthamWho/GsAvengers/releases/latest"><b>Download for Mac</b></a> ·
+  <a href="https://github.com/GauthamWho/GsAvengers/releases/latest"><b>Download for Windows</b></a> ·
+  <a href="#install-on-mac">Install</a> ·
+  <a href="#pair">Pair</a> ·
+  <a href="#windows-keyboard-cheat-sheet">Cheat sheet</a>
 </p>
 
-<p align="center">
-  <a href="https://vorssaint.com">Website</a> ·
-  <a href="#install">Install</a> ·
-  <a href="#everything-it-does">Features</a> ·
-  <a href="#private-by-default">Privacy</a> ·
-  <a href="CHANGELOG.md">Changelog</a> ·
-  <a href="mailto:hello@vorssaint.com">Contact</a> ·
-  <a href="https://discord.gg/M6BwWH4BJp">Discord</a>
-</p>
+<p align="center"><img src="docs/readme/tour.gif" width="720" alt="A tour of the G's Avengers window: Home, Windows sharing, Quick Ring, Clipboard, Windows & apps, Screenshot & record and Lid closed pages"></p>
 
-<p align="center">
-  <a href="https://github.com/vorssaint/vorssaint-utils/releases"><img src="https://img.shields.io/github/v/release/vorssaint/vorssaint-utils?label=release&color=4c8dff" alt="Latest release"></a>
-  <a href="https://github.com/vorssaint/vorssaint-utils/releases"><img src="https://img.shields.io/github/downloads/vorssaint/vorssaint-utils/total?color=4c8dff" alt="Downloads"></a>
-  <a href="https://github.com/vorssaint/vorssaint-utils/actions/workflows/ci.yml"><img src="https://github.com/vorssaint/vorssaint-utils/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI status"></a>
-  <a href="#what-you-need"><img src="https://img.shields.io/badge/macOS-14%2B%20Apple%20Silicon-black" alt="macOS 14 and newer, Apple Silicon"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue" alt="License GPL 3.0 or later"></a>
-</p>
+---
 
-<p align="center">
-  <a href="https://buymeacoffee.com/vorssaint">
-    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" width="217" height="60" alt="Buy Me a Coffee">
-  </a>
-</p>
+## Use one Windows keyboard & mouse on your Mac
 
-<p align="center">
-  For anything private, email
-  <a href="mailto:hello@vorssaint.com"><strong>hello@vorssaint.com</strong></a>.
-</p>
+Put your Windows laptop next to your Mac. Move the mouse off the edge of the Windows screen and the pointer **lands on the Mac**. The Windows keyboard types there, and it **behaves the Windows way**: Ctrl+C is copy, Home goes to the start of the line, Alt+Tab switches apps, Alt+F4 closes them.
 
-<p align="center">
-  <a href="https://trendshift.io/repositories/53716?utm_source=repository-badge&amp;utm_medium=badge&amp;utm_campaign=badge-repository-53716" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/repositories/53716" alt="vorssaint/vorssaint-utils | Trendshift" width="250" height="55"></a>
-  <a href="https://trendshift.io/repositories/53716?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-53716" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/53716/weekly?language=Swift" alt="vorssaint/vorssaint-utils | Trendshift weekly ranking" width="250" height="55"></a>
-  <a href="https://trendshift.io/repositories/53716?utm_source=trendshift-badge&amp;utm_medium=badge&amp;utm_campaign=badge-trendshift-53716" target="_blank" rel="noopener noreferrer"><img src="https://trendshift.io/api/badge/trendshift/repositories/53716/monthly?language=Swift" alt="vorssaint/vorssaint-utils | Trendshift monthly ranking" width="250" height="55"></a>
-</p>
+- **Finds the Mac by itself** on your home Wi-Fi. No IP address, no account, no cloud.
+- **Pair once** with a 6-digit number you check on both screens.
+- **Encrypted** end to end: ECDH P-256 key exchange, AES-256 + HMAC on every message.
+- **Clipboard both ways**: copy on Windows, paste on the Mac, and back. Text and pictures.
+- **Your Mac stays yours**: touch the Mac's own trackpad and the pointer comes back at once.
+- **Every key rule is a switch**, so you keep only the habits you want.
 
-<h2 align="center">Sponsors</h2>
+<p align="center"><img src="docs/readme/page-sharing.jpg" width="640" alt="The Windows sharing page: connected Windows PC, Share keyboard & mouse switch, pairing status and a drag-to-arrange screen layout"></p>
 
-<p align="center">
-  Help keep Vorssaint free and open source. Share your product with Mac users.
-</p>
+## Highlights
 
-<table align="center">
-  <tr>
-    <td align="center" width="520">
-      <br>
-      <strong>Your product here</strong><br>
-      <sub>Your logo · Your name · Your link</sub><br><br>
-      <a href="SPONSORS.md"><strong>Become our first sponsor →</strong></a><br><br>
-    </td>
-  </tr>
+<table>
+<tr>
+<td width="50%"><img src="docs/readme/page-home.jpg" alt="Home page with quick switches and Windows habits"><br><b>One window, nine pages.</b> Click the GsA icon in the menu bar. Everything is a switch: Home, Windows sharing, Keyboard, Clipboard, Quick Ring, Windows & apps, Screenshot & record, Lid closed and More.</td>
+<td width="50%"><img src="docs/readme/page-quickRing.jpg" alt="Quick Ring page: double-tap Control opens Capture, Record, Clipboard and Windows"><br><b>Quick Ring.</b> Double-tap <kbd>⌃ Control</kbd> and a glass ring opens right at the mouse: Capture, Record, Clipboard, Windows.</td>
+</tr>
+<tr>
+<td><img src="Modules/GsClipboard/docs/panel.png" width="320" alt="Clipboard history panel with text, links and a screenshot"><br><b>Clipboard history and emoji.</b> <kbd>fn V</kbd> opens your history where you are typing; <kbd>fn E</kbd> opens emoji. History stays on your Mac.</td>
+<td><img src="docs/readme/page-windowsApps.jpg" alt="Windows & apps page"><br><b>Windows habits for every app.</b> A Windows-style app switcher that also lists browser tabs, the red X that really closes the app, window snapping, and cut & paste for files in Finder.</td>
+</tr>
+<tr>
+<td><img src="docs/readme/page-capture.jpg" alt="Screenshot & record page"><br><b>Screenshot straight to the clipboard</b> and a <b>screen recorder</b>, one click each.</td>
+<td><img src="docs/readme/page-lidClosed.jpg" alt="Lid closed page"><br><b>Keep running with the lid closed</b>, for when the Mac sits shut beside your Windows laptop.</td>
+</tr>
 </table>
 
-<p align="center">
-  <img src="docs/assets/readme/panel-mixer.png" width="196" alt="Volume mixer with per app sliders, one app boosted past 100 percent">
-  <img src="docs/assets/readme/panel-system.png" width="196" alt="System tab with temperatures, usage graphs and memory pressure">
-  <img src="docs/assets/readme/panel-controls.png" width="196" alt="Window controls with the app switcher and Dock features">
-  <img src="docs/assets/readme/panel-utilities.png" width="196" alt="Utilities with cleaner, Homebrew, media tools and clipboard">
-</p>
+## All features
 
-Per app volume, a real system monitor, a better app switcher, window snapping, Dock previews, clipboard history, text snippets, a file shelf, an uninstaller. The utilities Mac users usually buy one by one, together behind a single menu bar icon, with no account, no telemetry and no subscription.
+- **One window** from the GsA menu-bar icon, with 9 pages
+- **Windows sharing**: one Windows keyboard & mouse drives the Mac over your home Wi-Fi, 6-digit pairing, encrypted, LAN only
+- **Windows keyboard works the Windows way** on the Mac (Ctrl = ⌘, ⊞ = fn, Home/End, Ctrl+arrows, Alt+Tab, Alt+F4, Print Screen…), each rule switchable
+- **Clipboard sync** both ways between Windows and the Mac
+- **Mac trackpad takes the pointer back** at any time
+- **Windows-style app switcher** with browser tabs
+- **X closes the app**, like on Windows
+- **Window snapping**
+- **Cut & paste files in Finder** (⌘X, ⌘V)
+- **Clipboard history** (fn V) and **emoji** (fn E)
+- **Screenshot straight to the clipboard**
+- **Screen recorder**
+- **Quick Ring**: double-tap ⌃ Control for a glass ring with Capture, Record, Clipboard and Windows
+- **Keep running with the lid closed**
+- Plus the Vorssaint toolbox under **More** (Dock preview, smooth scrolling, focus follows mouse and more)
+- **No servers**: the Vorssaint online services are switched off in this build
 
-## Install only what you use
+## How the setup looks
 
-Choose individual features or start with a preset. Uninstalled features stop loading and disappear from the interface; reinstalling restores their settings. Setup asks only for the permissions your choices need.
-
-<p align="center">
-  <img src="docs/assets/readme/features-hub.png" width="720" alt="The Features hub in Settings, installing and uninstalling whole features">
-</p>
-
-Reorder or hide panel sections, choose a compact layout, and export settings to another Mac. The app supports more than a dozen languages.
-
-## Everything it does
-
-### Sound
-
-- **Volume mixer.** Set volume per app, boost quiet audio past 100%, and pin or reorder favorites. No audio driver required.
-- **Per app output.** Play music through speakers while a call uses your headset.
-- **Output switcher.** Switch audio outputs with a shortcut and lower the volume when headphones disconnect.
-- **Microphone tools.** Choose a preferred input, adjust its level on supported devices, and apply available microphone mute or input-volume controls with one shortcut. Siri and some apps may still hear you; Mic Mute is not a privacy lock. Its indicator shows that the feature is on, not that every app receives silence.
-- **Music app blocker.** Prevent unwanted Music launches after detected playback-button presses. Requires Accessibility.
-
-### Know what your Mac is doing
-
-- **System monitor.** CPU, GPU, memory, temperatures, battery health and power use, with history graphs and a view of energy-hungry apps.
-- **Fan Control (beta).** Set manual fan speeds or temperature curves and monitor live RPM.
-- **Menu bar readouts.** Put your chosen readings, usage bars, battery time or fan speed directly in the menu bar.
-- **Network.** See live traffic, session totals and your local IP address, or run a speed test.
-- **Alerts.** Get notified about sustained CPU load, high temperatures, memory pressure, low disk space or low battery.
-
-### Windows and the Dock
-
-- **App switcher.** Switch between apps and windows with live previews, search and display filters. A simpler mode works without screen capture.
-- **Window layout.** Snap windows into layouts, move them between displays and restore earlier positions using shortcuts, screen edges or modifier-drag gestures.
-- **Dock Preview.** Hover over Dock icons to preview windows across desktops. Switch, close, move or snap them from the preview.
-- **Dock clicks.** Click an active app's Dock icon to minimize, hide or cycle through its windows.
-- **Maximize windows.** Use the green button to fill the screen without creating another Space.
-- **Fixed Space order.** Keep Spaces in the order you set instead of rearranging them by recent use. Turning it off restores your previous setting.
-- **Quit on close.** Quit selected apps when their last window closes.
-- **Quit and close protection.** Prevent accidental ⌘Q or ⌘W with a hold, double press or extra modifier, per app.
+<p align="center"><img src="docs/readme/setup-diagram.svg" width="900" alt="Setup diagram: a Windows laptop and a Mac on the same home Wi-Fi, both showing the same 6-digit code; moving the pointer off the shared edge puts it on the Mac"></p>
 
 <p align="center">
-  <img src="docs/assets/readme/quit-protection-hold.png" width="300" alt="The hold-to-confirm prompt showing progress below the Command-Q quit shortcut hint">
+  <img src="docs/readme/step-1.svg" width="200" alt="Step 1: install on the Mac">
+  <img src="docs/readme/step-2.svg" width="200" alt="Step 2: install on Windows">
+  <img src="docs/readme/step-3.svg" width="200" alt="Step 3: pair once with the 6-digit number">
+  <img src="docs/readme/step-4.svg" width="200" alt="Step 4: move the pointer across the edge">
 </p>
 
-<p align="center">
-  <img src="docs/assets/readme/window-switcher.gif" width="540" alt="The window switcher showing live thumbnails of open windows">
-</p>
+## Install on Mac
 
-### Keyboard and mouse
+**Needs:** macOS 14 Sonoma or newer, on an Apple Silicon Mac (M1 or later).
 
-- **Text snippets.** Expand short triggers into text with clipboard, date and time variables, or insert snippets from a searchable menu.
-- **Smooth scrolling.** Give your mouse wheel a fluid glide with adjustable speed and response.
-- **Pointer acceleration.** Disable mouse acceleration and restore your previous setting when turned off.
-- **Linear scrolling.** Make every mouse wheel notch scroll the same number of lines, however fast the wheel spins.
-- **Focus follows mouse.** Bring the window under the pointer forward after an adjustable pause.
-- **Scroll direction.** Invert vertical and horizontal mouse scrolling independently of the trackpad.
-- **Scroll sideways while holding a key.** Turn vertical wheel movement into horizontal scrolling while holding a chosen key.
-- **Side buttons.** Use mouse Back and Forward buttons in Finder, browsers and compatible apps.
-- **Mouse button shortcuts.** Assign keys to extra buttons and side wheels, or use button-drag gestures for Spaces and Mission Control.
-- **Middle click.** Turn a three-finger trackpad press into a middle click.
-- **Apps to leave alone.** Exclude chosen apps from mouse enhancements.
-- **Extra click filter.** Ignore accidental rapid clicks from worn mouse buttons without delaying normal clicks.
-- **Key debounce.** Filter repeated letters caused by a worn keyboard.
-- **Super key.** Use Caps Lock or a right-side modifier as a shortcut combination, with a separate tap action and app exclusions.
-- **Keyboard shortcuts.** Manage feature shortcuts in one place, including optional takeover of supported macOS shortcuts while a feature is active.
+1. Download **`GsAvengers-mac-1.0.0.dmg`** from the [latest release](https://github.com/GauthamWho/GsAvengers/releases/latest).
+2. Open it and drag **G's Avengers** onto **Applications**.
+3. The first time, **right-click the app → Open → Open**.
+   The app is signed with an Apple Development certificate but **not notarized** by Apple, so macOS asks once. If it still refuses, open **System Settings → Privacy & Security** and click **Open Anyway**.
+4. Click the **GsA** icon in the menu bar. Grant **Accessibility** when asked: it is needed to type and move the pointer for the Windows keyboard, and for the window tools.
 
-### Clipboard, files and links
+## Install on Windows
 
-- **Clipboard history.** Search local text, image and file history, pin favorites, preview entries and paste with shortcuts.
-- **Auto clear clipboard.** Clear the system clipboard after a delay, sleep or lock, while keeping saved history.
-- **Paste as plain text.** Paste without formatting while preserving the original clipboard content.
-- **Shelf.** Park files, text and links near your cursor while dragging, then drop or share them later.
-- **Finder shortcuts.** Move files with ⌘X and ⌘V, rename with F2, or paste copied images as PNG files.
-- **Clean URL.** Remove tracking parameters from links, manually or automatically.
-- **Disk image installer.** Install an app from a mounted disk image and eject it, with optional download cleanup.
+**Needs:** Windows 10 or 11 (uses the .NET Framework 4 that ships with Windows), on the same Wi-Fi as the Mac.
 
-### Everyday tools
+1. Download **`GsAvengers-windows-1.0.0.zip`** from the [latest release](https://github.com/GauthamWho/GsAvengers/releases/latest) and **Extract All**.
+2. Double-click **`INSTALL.cmd`**. It builds the app from the included source with the compiler already inside Windows (or uses the ready-made `prebuilt\GsAvengers.exe`), runs a self-test, and installs it for your user. No admin rights.
+3. The exe is **not code-signed**: if SmartScreen appears, click **More info → Run anyway**. If the firewall asks, allow **Private networks**.
 
-- **Dynamic Island.** Keep music, notifications, calendars, timers, downloads and everyday controls around the camera cutout, or a simulated one on other Macs. Customize sections and shortcuts, with optional lyrics, a live equalizer, camera preview and file tools.
-- **AI agents.** Follow Claude, Codex, OpenCode and GitHub Copilot in the Dynamic Island: plan limits and when they reset where available, tokens, API value, models, projects and live work, with a notice when a long task finishes. Codex's banked resets can be used from there too, and each extra Codex account (`CODEX_HOME`) can have a limits card of its own. Copilot uses local CLI/app session logs; its token totals update when shutdown metrics arrive, and aggregate API-value estimates use base rates.
-- **Command Bar.** Search apps, windows, files, clipboard history, snippets and app menu commands from one field. Calculate, convert units, find emoji or run saved scripts.
-- **Quick panel.** Open a floating palette of favorite tools with ⌃⌘V.
-- **Quick toggles.** Switch appearance, hide desktop icons, eject disks, empty the Trash, lock the screen and more.
-- **Quit apps.** See every open app in one list and quit them one by one, all at once or all but the one in front.
-- **Radial menu.** Open a customizable wheel of apps, files, shortcuts and tools around the pointer, with profiles and submenus.
-- **Scratchpad.** Keep autosaved notes in tabs, with Markdown preview and export, in a floating window or Dynamic Island.
-- **Cleaning Mode.** Lock keyboard input while cleaning, with a black screen or a small visible indicator.
+Full guide: [WINDOWS-INSTALL.md](Modules/GsShare/WINDOWS-INSTALL.md).
 
-### Capture and create
+## Pair
 
-- **Screen capture.** Switch between screenshots, recording, text recognition and color picking in one selector with a pixel magnifier.
-- **Screenshot.** Capture an area, window, screen or scrolling page. Annotate, crop, redact, add backgrounds and watermarks, pin captures, send them through the Share menu or share an expiring link.
-- **Screen recording.** Record with separate system-audio and microphone tracks. Trim, cut, add automatic zooms, blur private details and export video or GIFs, or share an expiring link.
-- **Camera preview.** Check your camera in a floating mirror or Dynamic Island before a call.
-- **Copy text from screen.** Recognize text offline from any screen area, or read a QR code.
-- **Color picker.** Copy a screen color as HEX, RGB, HSL or SwiftUI code.
-- **Media tools.** Compress and edit videos, batch-convert images, add watermarks, make GIFs and extract text, all locally.
+1. On the Mac: GsA icon → **Windows sharing**, with **Share keyboard & mouse** on.
+2. The Windows app finds the Mac by itself within a few seconds.
+3. Both screens show the **same 6-digit number**. If they match, click **Pair** on both.
+4. Drag the screens so they match your desk (Windows on the left, right, above or below).
+5. Move the mouse off that edge of the Windows screen. You are on the Mac.
 
-### App management
+You pair only once. Next time they connect by themselves.
 
-- **App updates.** Check store apps, package-managed apps and supported developer feeds in one list. Install managed updates together or open an app's own updater.
-- **Cleaner.** Remove caches, logs and app leftovers, manually or on a schedule.
-- **Messaging downloads.** Review, organize or move messaging downloads to the Trash using retention rules.
-- **Uninstaller.** Remove apps and review their related caches, preferences and helpers before moving them to the Trash.
-- **Homebrew manager.** Search, install and remove formulae and casks without opening a terminal.
-- **Port manager.** Find processes listening on network ports and stop them with Kill Process when installed.
+## Windows keyboard cheat sheet
 
-### Energy and display
+What each Windows key does on the Mac. Every row is a switch on the **Keyboard** page.
 
-- **Keep awake.** Keep your Mac working on a timer, with the lid closed, or while selected apps, power or external displays are present.
-- **Displays.** Control individual displays and brightness, with hardware control where supported, half or quarter steps for the brightness keys, optional extra dimming below a monitor's minimum, and software dimming as a fallback.
-- **Extra brightness.** Use a MacBook Pro XDR display's HDR headroom to go beyond its normal maximum brightness.
-- **Bluetooth on sleep.** Disconnect Bluetooth during sleep and restore it on wake only if Vorssaint turned it off.
+| On the Windows keyboard | On the Mac |
+|---|---|
+| **Ctrl** + C, V, X, Z, A, S, F, N, O, P, T, W, R, L… | **⌘ Command** + the same key |
+| **⊞ Windows** key | **fn**: ⊞+V clipboard, ⊞+E emoji, ⊞+Space dictation |
+| Ctrl+Space | fn Space (dictation shortcut) |
+| Ctrl+Y | Redo (⌘⇧Z) |
+| Home / End (+Shift) | Start / end of the line (select with Shift) |
+| Ctrl+Home / Ctrl+End | Top / bottom of the document |
+| Ctrl+← / → (+Shift) | Jump (or select) a word at a time |
+| Ctrl+Backspace / Ctrl+Delete | Delete a whole word |
+| Ctrl+Tab (+Shift) | Next / previous browser tab |
+| Alt+Tab (hold Alt) | App switcher, keeps cycling while Alt is held |
+| Alt+F4 | Quit the app (⌘Q) |
+| Ctrl+F4 | Close the window or tab (⌘W) |
+| Ctrl+Shift+Esc | Force Quit (⌘⌥Esc) |
+| Print Screen | Snip an area to the clipboard |
+| ⊞+L | Lock the Mac |
+| ⊞+D | Show the desktop |
+| ⊞+Tab | Mission Control |
+| ⊞+. | Emoji panel |
+| ⊞+E *(off by default)* | Open a Finder window |
+| **Finder:** F2 · Delete · Enter · Backspace | Rename · Move to Trash · Open · Back a folder |
+| **Terminals:** Ctrl | Stays ⌃ Control (Ctrl+C stops, Ctrl+R, Ctrl+D…) |
+| **Terminals:** Ctrl+V, Ctrl+Shift+C / V | Paste and copy, like Windows Terminal |
+| **Terminals:** Home / End, Ctrl+Backspace | ⌃A / ⌃E line ends, ⌃W delete word |
 
-## Install
+## Privacy & security
 
-With [Homebrew](https://brew.sh):
+- **Local only.** The Mac and the PC talk directly on your home network. Both ignore computers with internet (non-private) addresses. No cloud, no relay, no account, no analytics.
+- **No servers.** Update checks, share links and feedback uploads inherited from Vorssaint are switched off.
+- **Paired, then encrypted.** A new computer is accepted only after you compare the same 6-digit number on both screens and click Pair on both. Each connection uses a fresh P-256 key exchange; every message is AES-256 encrypted, HMAC-SHA256 signed and numbered, so it cannot be changed or replayed. Before pairing, no keyboard, mouse or clipboard data is accepted.
+- **Your typing is never stored.** Keys from Windows are turned into Mac key presses and forgotten. The logs hold connection messages only.
+- **Clipboard history stays on your Mac.**
+- **Lid-closed mode** asks for your admin password once, to add one rule that lets the app run only `pmset disablesleep 0/1`, nothing else.
 
-```sh
-brew install --cask vorssaint
-```
+Details: [SECURITY.md](SECURITY.md) · [security review](SECURITY-REVIEW.md) · [protocol](Modules/GsShare/docs/PROTOCOL.md) · [privacy](docs/PRIVACY.md) · [permissions](docs/PERMISSIONS.md)
 
-Or grab the disk image from the [releases page](https://github.com/vorssaint/vorssaint-utils/releases) and drag Vorssaint into Applications.
+## Roadmap
 
-Builds are signed with an Apple Developer ID and notarized, so macOS opens them without a fuss and your permissions survive updates.
+- **Mac → Windows**: the Mac's keyboard and trackpad driving the Windows PC
+- **Mac → Mac**: share between two Macs
+- **3 or more computers** in one layout
 
-## Uninstall
+## Want something?
 
-With Homebrew:
+Open an [issue](https://github.com/GauthamWho/GsAvengers/issues) or start a [Discussion](https://github.com/GauthamWho/GsAvengers/discussions) and we'll build it.
 
-```sh
-brew uninstall --cask vorssaint
-```
+## Licence
 
-To remove Vorssaint completely, including its settings and permissions:
+This repository has **two licences**, explained in plain words in [NOTICE](NOTICE):
 
-```sh
-./Tools/uninstall.sh
-```
+- **The main Mac app** (everything outside `Modules/GsShare` and `Modules/GsClipboard`) is a modified version of [Vorssaint](https://github.com/vorssaint/vorssaint-utils) and is licensed under **GPL-3.0-or-later** ([LICENSE](LICENSE)). The GPL lets anyone use, study, change, rebuild and share this part under the same licence. That cannot be taken away, because it is built on GPL code.
+- **The sharing app (Mac + Windows) and the clipboard helper** (`Modules/GsShare`, `Modules/GsClipboard`) are GauthamWho's own original code: **all rights reserved**, source-available for reading, free for personal use (official builds, or your own unmodified build); no copying, modifying, redistributing or derivative works without permission ([GsShare licence](Modules/GsShare/LICENSE), [GsClipboard licence](Modules/GsClipboard/LICENSE)).
 
-## Private by default
+## Credits
 
-Vorssaint is local-first, with no account, analytics or tracking. The network is touched only by things you can see: update checks, the speed test, Homebrew actions, optional online lyric lookup, temporary screenshot or recording links and feedback you explicitly send. The full story is in the [privacy notes](docs/PRIVACY.md).
-
-Permissions get the same treatment. Every one is optional, the app explains each in plain words, shows which features actually use it, and even tells you when a permission you granted is no longer needed by anything, with a shortcut to revoke it.
-
-<p align="center">
-  <img src="docs/assets/readme/permissions.png" width="720" alt="The Permissions page showing what each permission does, which features use it, and an unused permission warning">
-</p>
-
-See the [permissions guide](docs/PERMISSIONS.md) for which features need access and what remains available without it.
-
-## What you need
-
-- A Mac with Apple Silicon
-- macOS 14 Sonoma or newer
-
-### Build it yourself
-
-```sh
-git clone https://github.com/vorssaint/vorssaint-utils.git
-cd vorssaint-utils
-./build.sh --dev            # build the separate Developer variant
-./build.sh --dev --install  # install and launch it
-```
-
-Xcode Command Line Tools are the only requirement. The [contributing guide](CONTRIBUTING.md) covers the layout and conventions. Official builds come only from the maintainer: the GPL covers the source, while the Vorssaint name, icon and look are covered by [TRADEMARKS.md](TRADEMARKS.md), so forks need their own identity.
-
-## When something misbehaves
-
-See [troubleshooting](docs/TROUBLESHOOTING.md) for launch problems, permissions and missing previews, or [support](SUPPORT.md) for help.
-
-## Documentation
-
-- [Privacy](docs/PRIVACY.md), what does and does not leave your Mac
-- [Permissions](docs/PERMISSIONS.md), every macOS permission in plain words
-- [Troubleshooting](docs/TROUBLESHOOTING.md), the common fixes
-- [Contributing](CONTRIBUTING.md), build, layout and conventions
-- [Support](SUPPORT.md), where to get help
-- [Security](SECURITY.md), how to report a vulnerability
-
-## Community
-
-Vorssaint went from first commit to the front of GitHub trending in three days, top of the Swift charts, and issues and pull requests have shaped every release since. Bug reports, feature ideas and translations are all welcome, starting from the [contributing guide](CONTRIBUTING.md).
-
-Vorssaint is free and will stay that way. If it earned its place in your menu bar, a star helps other people find it, and a [coffee](https://buymeacoffee.com/vorssaint) keeps the maintainer awake, with or without the Keep awake feature.
-
-## Acknowledgements
-
-- App icon designed by [@divisionseven](https://github.com/divisionseven)
-
-## License
-
-[GPL 3.0 or later](LICENSE), copyright 2026 Vorssaint. The license covers the source code; the Vorssaint name, logo and look are covered separately in [TRADEMARKS.md](TRADEMARKS.md).
-
-<p align="center">
-  <sub>Made by <a href="https://x.com/vorssaint">@vorssaint</a></sub>
-</p>
+- Built on **[Vorssaint](https://github.com/vorssaint/vorssaint-utils)** by Vorssaint and its contributors (GPL-3.0-or-later): the menu-bar app, switcher, window tools, capture, recorder and much more come from there. Thank you! "Vorssaint" is their trademark; this fork uses its own name, icon and identifiers ([TRADEMARKS.md](TRADEMARKS.md)).
+- G's Avengers, the sharing app, the clipboard helper and the Frost window: **[GauthamWho](https://github.com/GauthamWho)**.

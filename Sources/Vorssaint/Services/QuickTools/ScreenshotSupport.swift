@@ -170,9 +170,8 @@ enum ScreenshotSupport {
         isAvailable(selected.feature)
     }
 
-    static func selectionDimAlpha(notchControls: Bool, isFrozen: Bool, isDragging: Bool) -> CGFloat {
-        if notchControls { return isDragging ? 0.18 : 0 }
-        return isFrozen ? 0.22 : 0.18
+    static func selectionDimAlpha(isFrozen: Bool) -> CGFloat {
+        isFrozen ? 0.22 : 0.18
     }
 
     static func captureGuideIsVisible(pointerOnDisplay: Bool,
@@ -196,11 +195,8 @@ enum ScreenshotSupport {
         isAvailable && pointerOnDisplay && !selectionInProgress && !capturePending
     }
 
-    static func fullScreenCaptureControlTopInset(screenChromeHeight: CGFloat,
-                                                 notchControlsHeight: CGFloat?) -> CGFloat {
-        let chrome = screenChromeHeight.isFinite ? max(0, screenChromeHeight) : 0
-        let controls = notchControlsHeight.flatMap { $0.isFinite ? max(0, $0) : nil } ?? 0
-        return max(chrome, controls) + 12
+    static func fullScreenCaptureControlTopInset(screenChromeHeight: CGFloat) -> CGFloat {
+        (screenChromeHeight.isFinite ? max(0, screenChromeHeight) : 0) + 12
     }
 
     /// Whether the guide should advertise repeating the last capture region.

@@ -160,13 +160,12 @@ struct MenuBarMetricsPreview: View {
                 .font(.system(size: 13.6, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 14.2, height: 14.2)
-        case let .metricBlock(label, value, minimumValue, style, pressure, warning):
+        case let .metricBlock(label, value, minimumValue, style, pressure):
             metricBlock(label: label,
                         value: value,
                         minimumValue: minimumValue,
                         style: style,
-                        pressure: pressure,
-                        warning: warning)
+                        pressure: pressure)
         case let .usageBarBlock(label, fraction, style, pressure):
             usageBarBlock(label: label,
                           fraction: fraction,
@@ -201,7 +200,7 @@ struct MenuBarMetricsPreview: View {
             .frame(width: MenuBarRenderer.rateBlockWidth(style: style),
                    height: style == .readable ? 22 : 20,
                    alignment: .center)
-        case let .batteryBlock(percent, isCharging, externalConnected, warning, style):
+        case let .batteryBlock(percent, isCharging, externalConnected, style):
             HStack(spacing: style == .readable ? 5 : 4) {
                 Image(systemName: BatteryPowerSupport.menuBarSymbol(percent: percent,
                                                                     isCharging: isCharging,
@@ -213,7 +212,7 @@ struct MenuBarMetricsPreview: View {
                                   design: .monospaced))
                     .frame(minWidth: style == .readable ? 33 : 30, alignment: .leading)
             }
-            .foregroundStyle(MenuBarRenderer.nsColor(for: warning).map { Color(nsColor: $0) } ?? .white)
+            .foregroundStyle(.white)
             .fixedSize(horizontal: true, vertical: true)
         case let .dot(pressure):
             Circle()
@@ -233,8 +232,7 @@ struct MenuBarMetricsPreview: View {
                              value: String,
                              minimumValue: String,
                              style: MenuBarBlockStyle,
-                             pressure: MemoryPressure?,
-                             warning: BatteryWarning) -> some View {
+                             pressure: MemoryPressure?) -> some View {
         VStack(spacing: -1) {
             Text(label)
                 .font(.system(size: style == .readable ? 7.2 : 6.6, weight: .medium))
@@ -247,7 +245,6 @@ struct MenuBarMetricsPreview: View {
                 }
                 if !value.isEmpty {
                     Text(value)
-                        .foregroundStyle(MenuBarRenderer.nsColor(for: warning).map { Color(nsColor: $0) } ?? .white)
                         .font(.system(size: style == .readable ? 13 : 12,
                                       weight: .semibold,
                                       design: .monospaced))

@@ -575,8 +575,6 @@ struct SettingsView: View {
             }
         case .features: FeatureHubSettings()
         case .textSnippets: TextSnippetsSettings()
-        case .notch: NotchSettings()
-        case .notchMascot: NotchMascotSettings()
         case .radialMenu: RadialMenuSettings()
         case .commandBar: CommandBarSettings()
         case .energy: EnergySettings(focus: router.destination.sectionAnchor)
@@ -596,6 +594,8 @@ struct SettingsView: View {
         case .cleaner: CleanerSettings()
         case .homebrew: HomebrewSettings()
         case .appUpdates: AppUpdatesSettings()
+        case .helperClipboard: HelperClipboardSettings()
+        case .windowsSharing: WindowsSharingSettings()
         case .media: MediaSettings()
         case .clipboard: ClipboardSettings()
         case .quickTools: QuickToolsSettings()
@@ -729,7 +729,9 @@ struct AboutSettings: View {
                 aboutContent
             }
 
-            UpdatesView()
+            if AppInfo.remoteServicesEnabled {
+                UpdatesView()
+            }
         }
         .formStyle(.grouped)
     }
@@ -770,10 +772,9 @@ struct AboutSettings: View {
                 Button(l10n.s.reviewIntro) {
                     appDelegate()?.showOnboarding()
                 }
-                Button(l10n.s.reviewHighlights) {
-                    appDelegate()?.showUpdateHighlights(isReview: true)
+                if AppInfo.upstreamLinksEnabled {
+                    Link(l10n.s.viewOnGitHub, destination: AppInfo.repositoryURL)
                 }
-                Link(l10n.s.viewOnGitHub, destination: AppInfo.repositoryURL)
             }
             Text(AppInfo.copyright)
                 .font(.caption2)

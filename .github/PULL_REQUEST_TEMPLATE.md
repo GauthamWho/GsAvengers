@@ -9,7 +9,7 @@ Mention partial fixes or dependencies on another PR.
 
 List checks actually run and their results, plus anything you could not test.
 Include Mac, macOS, display or language details when relevant to the behavior.
-See the [contribution guide](https://github.com/vorssaint/vorssaint-utils/blob/main/CONTRIBUTING.md#validation) for available checks.
+`./build.sh --test` runs the Mac tests; `bash Modules/GsShare/mac/test.sh` runs the key-rule tests.
 
 ## Related issues
 

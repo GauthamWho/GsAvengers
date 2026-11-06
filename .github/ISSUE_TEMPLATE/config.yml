@@ -1,9 +1,9 @@
 blank_issues_enabled: true
 
 contact_links:
-  - name: Troubleshooting Guide
-    about: The usual fixes for permissions, Gatekeeper and a feature that stopped responding.
-    url: https://github.com/vorssaint/vorssaint-utils/blob/main/docs/TROUBLESHOOTING.md
-  - name: Security Vulnerability
-    about: Please report security vulnerabilities privately.
-    url: https://github.com/vorssaint/vorssaint-utils/security/advisories/new
+  - name: Ideas and questions
+    about: Want something new, or not sure it is a bug? Start a Discussion.
+    url: https://github.com/GauthamWho/GsAvengers/discussions
+  - name: Security vulnerability
+    about: Please report security problems privately, not in a public issue.
+    url: https://github.com/GauthamWho/GsAvengers/security/advisories/new

@@ -8,7 +8,7 @@ import ObjectiveC
 /// The watched surface owns its destination independently of the system's
 /// latest player. Reads and commands use this same path, without changing the
 /// system-wide player or requesting automation permission.
-enum NotchNativePlayback {
+enum NativePlayback {
     struct Target {
         let pid: Int32
         let bundleIdentifier: String
@@ -21,7 +21,7 @@ enum NotchNativePlayback {
 
         var isRunning: Bool {
             guard let app = NSRunningApplication(processIdentifier: pid), !app.isTerminated else { return false }
-            return NotchNativePlayback.resolvedBundleIdentifier(for: app) == bundleIdentifier
+            return NativePlayback.resolvedBundleIdentifier(for: app) == bundleIdentifier
         }
     }
 
@@ -30,9 +30,9 @@ enum NotchNativePlayback {
     private static let lock = NSLock()
     private static var selected: Target?
     private static var identity: Identity?
-    private static var context: NotchPlaybackContext?
-    private static var sources: [NotchPlaybackSource] = []
-    private static var selection: NotchPlaybackSource.Selection?
+    private static var context: PlaybackContext?
+    private static var sources: [PlaybackSource] = []
+    private static var selection: PlaybackSource.Selection?
     /// System uptime at which the chosen source, still without a track, is
     /// released. A monotonic clock, so changing the time cannot stretch it.
     private static var releaseAt: TimeInterval?
@@ -55,7 +55,7 @@ enum NotchNativePlayback {
         return releaseAt
     }
 
-    static func choose(_ requested: NotchPlaybackSource.Selection?) {
+    static func choose(_ requested: PlaybackSource.Selection?) {
         lock.lock(); defer { lock.unlock() }
         guard requested == nil || sources.contains(where: { $0.selection == requested && $0.hasTrack }) else { return }
         selection = requested
@@ -72,7 +72,7 @@ enum NotchNativePlayback {
             guard !title.isEmpty else { return nil }
             let identifier = info["itemIdentifier"] as? String
                 ?? info["kMRMediaRemoteNowPlayingInfoContentItemIdentifier"] as? String
-            item = identifier.flatMap { NotchPlaybackCommand.validIdentifier($0) ? $0 : nil }
+            item = identifier.flatMap { PlaybackCommand.validIdentifier($0) ? $0 : nil }
             if item != nil { metadata = []; return }
             let duration = (info["kMRMediaRemoteNowPlayingInfoDuration"] as? NSNumber)?.doubleValue
             metadata = [title, info["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? "",
@@ -162,7 +162,7 @@ enum NotchNativePlayback {
                 applications.append(current)
             }
         }
-        var candidates: [(Target, NotchPlaybackSource)] = []
+        var candidates: [(Target, PlaybackSource)] = []
         // A rate the player has not updated would rank a paused song as
         // playing. Its own state wins where it answers in time.
         var states: [Int32: Bool] = [:]
@@ -172,7 +172,7 @@ enum NotchNativePlayback {
             // A browser can publish through a web content helper. Keep its exact
             // process for routing, and use the parent app only for presentation/opening.
             candidate.applicationBundleIdentifier = presentation[candidate.pid]?.application
-                .flatMap { NotchPlaybackCommand.validIdentifier($0) ? $0 : nil }
+                .flatMap { PlaybackCommand.validIdentifier($0) ? $0 : nil }
             stateReads.enter()
             readPlaybackState(candidate, queue: callbacks) { isPlaying in
                 resultsLock.lock()
@@ -182,7 +182,7 @@ enum NotchNativePlayback {
             }
             group.enter()
             readInfo(candidate, artwork: false, queue: callbacks) { info in
-                let source = NotchPlaybackSource(pid: candidate.pid, bundleIdentifier: candidate.bundleIdentifier,
+                let source = PlaybackSource(pid: candidate.pid, bundleIdentifier: candidate.bundleIdentifier,
                     isMusicApp: isMusicApp(app, parentBundleIdentifier: candidate.applicationBundleIdentifier),
                     isPlaying: (info?["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? NSNumber)?.doubleValue ?? 0 > 0,
                     hasTrack: (info?["kMRMediaRemoteNowPlayingInfoTitle"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false,
@@ -199,7 +199,7 @@ enum NotchNativePlayback {
         resultsLock.lock()
         let ready = candidates.map { candidate, source in
             guard let playing = states[candidate.pid], playing != source.isPlaying else { return (candidate, source) }
-            return (candidate, NotchPlaybackSource(pid: source.pid, bundleIdentifier: source.bundleIdentifier,
+            return (candidate, PlaybackSource(pid: source.pid, bundleIdentifier: source.bundleIdentifier,
                                                    isMusicApp: source.isMusicApp, isPlaying: playing,
                                                    hasTrack: source.hasTrack, displayName: source.displayName))
         }
@@ -231,7 +231,7 @@ enum NotchNativePlayback {
         // controls. The empty surface still lets the user choose another one.
         if let requested, !bridging,
            !ready.contains(where: { $0.1.selection == requested && $0.1.hasTrack }) { return nil }
-        let source = NotchPlaybackSource.preferred(in: ready.map(\.1), previousPID: target?.pid,
+        let source = PlaybackSource.preferred(in: ready.map(\.1), previousPID: target?.pid,
                                                    systemPID: currentPID, selection: requested,
                                                    includeOtherPlayers: includeOtherPlayers)
         guard var chosen = ready.first(where: { $0.1 == source })?.0 else { return nil }
@@ -251,7 +251,7 @@ enum NotchNativePlayback {
     }
 
     @discardableResult
-    static func publish(_ target: Target?, info: [String: Any] = [:]) -> NotchPlaybackContext? {
+    static func publish(_ target: Target?, info: [String: Any] = [:]) -> PlaybackContext? {
         lock.lock()
         defer { lock.unlock() }
         guard var target, let next = Identity(info) else {
@@ -262,7 +262,7 @@ enum NotchNativePlayback {
         // item ID, use only observable recording metadata for its revision.
         if selected?.pid != target.pid || selected?.bundleIdentifier != target.bundleIdentifier
             || identity != next {
-            context = NotchPlaybackContext(pid: target.pid, revision: UUID())
+            context = PlaybackContext(pid: target.pid, revision: UUID())
         }
         target.itemIdentifier = next.item
         // Some players expose Play and Pause separately. Use the command for
@@ -286,7 +286,7 @@ enum NotchNativePlayback {
         selected = current
     }
 
-    static func validatedTarget(for requested: NotchPlaybackContext) -> Target? {
+    static func validatedTarget(for requested: PlaybackContext) -> Target? {
         lock.lock()
         let target = context == requested ? selected : nil
         let expected = identity
@@ -422,12 +422,12 @@ enum NotchNativePlayback {
     private static func resolvedBundleIdentifier(for app: NSRunningApplication) -> String? {
         let identifier = app.bundleIdentifier
             ?? app.bundleURL.flatMap { Bundle(url: $0)?.bundleIdentifier }
-        return identifier.flatMap { NotchPlaybackCommand.validIdentifier($0) ? $0 : nil }
+        return identifier.flatMap { PlaybackCommand.validIdentifier($0) ? $0 : nil }
     }
 
     private static func isMusicApp(_ app: NSRunningApplication, parentBundleIdentifier: String? = nil) -> Bool {
         let category = app.bundleURL.flatMap { Bundle(url: $0)?.object(forInfoDictionaryKey: "LSApplicationCategoryType") as? String }
-        return NotchPlaybackSource.isMusicApplication(bundleIdentifier: resolvedBundleIdentifier(for: app),
+        return PlaybackSource.isMusicApplication(bundleIdentifier: resolvedBundleIdentifier(for: app),
                                                       parentBundleIdentifier: parentBundleIdentifier, category: category)
     }
 

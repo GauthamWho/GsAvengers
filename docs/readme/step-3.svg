@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" width="220" height="150" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>Step 3: Pair once</title>
+  <rect x="1" y="1" width="218" height="148" rx="18" fill="#FFFFFF" stroke="#E6E1F0" stroke-width="2"/>
+  <circle cx="34" cy="34" r="18" fill="#FF6B57"/>
+  <text x="34" y="41" text-anchor="middle" font-size="19" font-weight="800" fill="#FFFFFF">3</text>
+  <g transform="translate(150 34)"><rect x="-34" y="-14" width="68" height="28" rx="8" fill="#FFF1E6" stroke="#FF8A4C" stroke-width="2"/><text x="0" y="6" text-anchor="middle" font-size="15" font-weight="800" fill="#1B2440">482913</text></g>
+  <text x="18" y="96" font-size="17" font-weight="700" fill="#1B2440">Pair once</text>
+  <text x="18" y="120" font-size="12.5" fill="#5B6478">Same 6 digits on both? Press Pair</text>
+</svg>

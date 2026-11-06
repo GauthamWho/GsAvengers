@@ -240,6 +240,12 @@ struct QuickToolsSettings: View {
                 .settingsFormSectionAnchor(.wallpaper)
             }
 
+            if AppFeature.quickRing.isAvailable {
+                QuickRingSettingsSection()
+                    .settingsFormSectionAnchor(.quickRing)
+            }
+
+
             if AppFeature.scratchpad.isAvailable {
                 Section {
                     Button {

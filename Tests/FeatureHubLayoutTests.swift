@@ -23,7 +23,7 @@ enum FeatureHubLayoutTests {
         @ObservedObject var features = FeatureRuntime.shared
         @State var tab = Tab.features
         @State var confirmingPreset: FeaturePreset?
-        var neverUsed: [AppFeature] { features.offersNeverUsed ? [.notch] : [] }
+        var neverUsed: [AppFeature] { features.offersNeverUsed ? [.dockPreview] : [] }
         let recentlyUninstalled: [AppFeature] = []
         let hub = FeatureStrings.hub(.enUS)
         var body: some View { content }
@@ -32,10 +32,7 @@ enum FeatureHubLayoutTests {
         @ViewBuilder var neverUsedCard: some View {
             if features.offersNeverUsed { Text("Never used").frame(height: 120) }
         }
-        var dynamicIslandCard: some View {
-            Text("Dynamic Island").frame(height: 900).id(FeatureGroup.dynamicIsland)
-        }
-        var presetsCard: some View { Text("Presets").frame(height: 180) }
+        var presetsCard: some View { Text("Presets").frame(height: 400) }
         func groupCard(_ group: FeatureGroup) -> some View {
             SettingsCard {
                 Text(group.rawValue)

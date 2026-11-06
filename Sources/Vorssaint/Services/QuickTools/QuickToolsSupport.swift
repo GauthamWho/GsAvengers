@@ -28,7 +28,7 @@ enum QuickToolsSupport {
     }
 
     /// Which way a grid fills: row by row with a fixed column count, or
-    /// column by column with a fixed row count, as a rail in the island does.
+    /// column by column with a fixed row count.
     enum GridFlow: Equatable {
         case rows(columns: Int)
         case columns(rows: Int)

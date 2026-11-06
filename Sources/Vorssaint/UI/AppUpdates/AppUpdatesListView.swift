@@ -11,7 +11,6 @@ struct AppUpdatesListView: View {
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var updates = AppUpdatesService.shared
     @ObservedObject private var homebrew = HomebrewManager.shared
-    @Environment(\.notchPresentation) private var inNotch
     @AppStorage(DefaultsKey.appUpdatesIncludeOnlineCatalog)
     private var includeOnlineCatalog = true
     @AppStorage(DefaultsKey.appUpdatesIncludeAppStore)
@@ -233,15 +232,6 @@ struct AppUpdatesListView: View {
         panel.allowedContentTypes = [.applicationBundle]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.message = text.addException
-        // The island floats above the modal panel level, so there the picker
-        // opens on its own just above it, like the island's alerts.
-        guard !inNotch else {
-            DispatchQueue.main.async {
-                guard panel.runAboveIsland() == .OK, let url = panel.url else { return }
-                updates.addExclusion(appAt: url)
-            }
-            return
-        }
         NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, let url = panel.url else { return }
         updates.addExclusion(appAt: url)

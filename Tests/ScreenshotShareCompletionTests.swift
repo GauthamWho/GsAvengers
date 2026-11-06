@@ -6,7 +6,7 @@ import Foundation
 /// Runs the production completion handler with controlled upload and clipboard results.
 /// No network request or native preview is created.
 enum ScreenshotShareCompletionTests {
-    typealias DispatchQueue = NotchScreenRefreshContract.DispatchQueue
+    typealias DispatchQueue = ManualMainQueue.DispatchQueue
     final class Model {
         var deletingShare = false
         var sharing = false
@@ -405,8 +405,10 @@ enum ScreenshotShareCompletionTests {
             AppFeature.available = scenario != "feature off"
             let png = Data([137, 80, 78, 71, 13, 10, 26, 10])
             _ = try? await gate.createLink(pngData: png, duration: .oneHour)
-            suite.expect(gate.session.uploads == (scenario == "enabled" ? 1 : 0)
-                         && gate.writes == (scenario == "enabled" ? 1 : 0),
+            // G’s Mac keeps Vorssaint's share servers switched off, so nothing
+            // may upload or persist then, even with links and the feature on.
+            let expected = scenario == "enabled" && AppInfo.remoteServicesEnabled ? 1 : 0
+            suite.expect(gate.session.uploads == expected && gate.writes == expected,
                          "service checks \(scenario) before persistence or any upload")
         }
         SharingDefaults.standard.enabled = true
@@ -515,7 +517,7 @@ enum ScreenshotShareCompletionTests {
         suite.expect(standaloneRetry.uploads == 1 && service.copies == [record.url, record.url],
                      "standalone shortcut retries copying its existing link without uploading again")
         for duration in [3.0, 12.0] {
-            DispatchQueue.main = NotchScreenRefreshContract.Scheduler()
+            DispatchQueue.main = ManualMainQueue.Scheduler()
             let history = Uploader()
             let historyPreview = history.showPreview(capture: 2)
             historyPreview.autoDismissDuration = duration
@@ -528,7 +530,7 @@ enum ScreenshotShareCompletionTests {
             history.completion?(record)
             suite.expect(historyPreview.closed, "history upload copies and closes its own preview")
         }
-        DispatchQueue.main = NotchScreenRefreshContract.Scheduler()
+        DispatchQueue.main = ManualMainQueue.Scheduler()
         let deleting = Uploader()
         let deletingPreview = deleting.showPreview()
         deletingPreview.model.sharedRecord = record

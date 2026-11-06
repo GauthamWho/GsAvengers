@@ -814,8 +814,8 @@ extension ScratchpadFeatureStrings {
 }
 
 extension ScratchpadFeatureStrings {
-    /// One place both toolbars read their labels from, so the floating pad and
-    /// the island cannot drift into calling the same mark different things.
+    /// One place the toolbar and the shortcuts read their labels from, so they
+    /// cannot drift into calling the same mark different things.
     func label(for mark: ScratchpadMark) -> String {
         switch mark {
         case .bold: return markBold

@@ -4,7 +4,6 @@
 import SwiftUI
 
 struct QuickLauncherView: View {
-    var notchSize: CGSize? = nil
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var l10n = L10n.shared
     @ObservedObject private var launcher = QuickLauncherService.shared
@@ -25,18 +24,12 @@ struct QuickLauncherView: View {
     @AppStorage(DefaultsKey.clipboardHistoryLimit) private var clipboardLimit = 50
 
     private var columns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: notchSize == nil ? 10 : 6), count: notchSize == nil ? QuickLauncherService.columns : NotchSupport.toolColumns)
+        Array(repeating: GridItem(.flexible(), spacing: 10), count: QuickLauncherService.columns)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // In the notch the island's top row holds the customize toggle,
-            // and with a utility open the way back and the utility's name, so
-            // the launcher's own header stays for the floating panel.
-            if notchSize == nil { header }
-            if notchSize != nil, launcher.activeUtility == nil, launcher.isEditing {
-                editHint
-            }
+            header
             if let utility = launcher.activeUtility, utility.feature.isAvailable {
                 hostedUtility(utility)
             } else if launcher.visibleItems.isEmpty && !launcher.isEditing {
@@ -51,25 +44,12 @@ struct QuickLauncherView: View {
             if launcher.activeUtility == nil, launcher.isEditing, !launcher.hiddenItems.isEmpty {
                 hiddenTray
             }
-            if notchSize == nil { footer }
+            footer
         }
-        .padding(notchSize == nil ? 16 : 0)
-        .frame(width: notchSize?.width ?? 420)
-        .background { if notchSize == nil { HUDBackdrop(cornerRadius: 22, contrast: .high) } }
-        .clipShape(RoundedRectangle(cornerRadius: notchSize == nil ? 22 : 0, style: .continuous))
-        .notchBand(leading: {
-            if notchSize != nil, let utility = launcher.activeUtility {
-                // The way back to the tools names the open one, as a detail's does.
-                NotchBandBackButton(title: title(for: utility), action: launcher.closeUtility)
-            }
-        }, trailing: {
-            if notchSize != nil, launcher.activeUtility == nil {
-                NotchIconButton(symbol: launcher.isEditing ? "checkmark" : "slider.horizontal.3",
-                                title: FeatureStrings.notch(l10n.language).customizeTools, selected: launcher.isEditing) {
-                    withAnimation(.easeOut(duration: 0.15)) { launcher.isEditing.toggle() }
-                }
-            }
-        })
+        .padding(16)
+        .frame(width: 420)
+        .background { HUDBackdrop(cornerRadius: 22, contrast: .high) }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .onChange(of: features.revision, initial: true) { launcher.refreshAvailability() }
         .onChange(of: launcher.presentationID) { _, _ in
             hoveredItem = nil
@@ -123,8 +103,7 @@ struct QuickLauncherView: View {
                 }
             }
         }
-        // The island's row holds the way back, so the utility has the page.
-        .frame(height: notchSize?.height ?? 470)
+        .frame(height: 470)
     }
 
     private var header: some View {
@@ -204,42 +183,21 @@ struct QuickLauncherView: View {
         .accessibilityLabel(l10n.s.obBack)
     }
 
-    /// Inside the island the tiles fill the rows its height allows and run
-    /// sideways; editing keeps the grid, whose reorder targets need every
-    /// tile in view.
     @ViewBuilder private var grid: some View {
-        if let notchSize, !launcher.isEditing {
-            let rows = NotchLayout.railRows(count: launcher.visibleItems.count,
-                                            perRow: NotchLayout.railCapacity(width: notchSize.width, itemWidth: NotchLayout.toolWidth,
-                                                                             spacing: NotchLayout.toolSpacing),
-                                            rowHeight: NotchLayout.toolHeight, spacing: NotchLayout.toolSpacing, height: notchSize.height)
-            let titleInset = NotchLayout.toolTitleInset(count: launcher.visibleItems.count, rows: rows, width: notchSize.width)
-            NotchRail(items: launcher.visibleItems, rows: rows, itemWidth: NotchLayout.toolWidth, width: notchSize.width,
-                      spacing: NotchLayout.toolSpacing, leastSpacing: NotchLayout.toolLeastSpacing,
-                      rowSpacing: NotchLayout.toolSpacing,
-                      scrollTarget: launcher.keyboardIndex.flatMap { index in
-                          launcher.visibleItems.indices.contains(index) ? launcher.visibleItems[index].id : nil
-                      }) { item in
-                cell(item, titleInset: titleInset).frame(height: NotchLayout.toolHeight)
-            }
-        } else {
-            LazyVGrid(columns: columns, spacing: notchSize == nil ? 10 : 6) {
-                ForEach(launcher.visibleItems) { item in
-                    PanelReorderableItem(item: item,
-                                         isEnabled: launcher.isEditing,
-                                         order: launcher.itemOrderBinding,
-                                         dragging: $draggingItem) {
-                        cell(item)
-                    }
+        LazyVGrid(columns: columns, spacing: 10) {
+            ForEach(launcher.visibleItems) { item in
+                PanelReorderableItem(item: item,
+                                     isEnabled: launcher.isEditing,
+                                     order: launcher.itemOrderBinding,
+                                     dragging: $draggingItem) {
+                    cell(item)
                 }
             }
         }
     }
 
-    /// `titleInset` keeps the title clear of its neighbours' where the
-    /// island's rail closes its gaps.
     @ViewBuilder
-    private func cell(_ item: QuickLauncherItem, titleInset: CGFloat = 0) -> some View {
+    private func cell(_ item: QuickLauncherItem) -> some View {
         let index = launcher.visibleItems.firstIndex(of: item)
         let isSelected = !launcher.isEditing && index != nil && index == launcher.selectedIndex
         let isHovered = hoveredItem == item
@@ -258,14 +216,14 @@ struct QuickLauncherView: View {
                 launcher.run(item)
             }
         } label: {
-            VStack(spacing: notchSize == nil ? 7 : 6) {
+            VStack(spacing: 7) {
                 ZStack(alignment: .topTrailing) {
-                    RoundedRectangle(cornerRadius: notchSize == nil ? 12 : 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(iconBackground(item, isSelected: isSelected, isHovered: isHovered))
-                        .frame(width: notchSize == nil ? 46 : 32, height: notchSize == nil ? 46 : 32)
+                        .frame(width: 46, height: 46)
                         .overlay(
                             Image(systemName: icon(for: item))
-                                .font(.system(size: notchSize == nil ? 19 : 16, weight: .semibold))
+                                .font(.system(size: 19, weight: .semibold))
                                 .foregroundStyle(iconColor(item))
                         )
                     if launcher.isEditing {
@@ -286,7 +244,7 @@ struct QuickLauncherView: View {
                             Image(systemName: "gearshape.circle.fill")
                                 .font(.system(size: 14))
                                 .foregroundStyle(.white, optionsItem == item ? Color.accentColor : Color.secondary)
-                                .frame(width: notchSize == nil ? 46 : 32, height: notchSize == nil ? 46 : 32, alignment: .topLeading)
+                                .frame(width: 46, height: 46, alignment: .topLeading)
                                 .offset(x: -7, y: -7)
                                 .help(l10n.s.menuSettings)
                                 .allowsHitTesting(false)
@@ -301,11 +259,11 @@ struct QuickLauncherView: View {
                         }
                         // Keys 1-9 activate the first nine tiles; the badge is
                         // the only hint that shortcut exists.
-                        if notchSize == nil, let index, index < 9 {
+                        if let index, index < 9 {
                             Image(systemName: "\(index + 1).circle.fill")
                                 .font(.system(size: 13))
                                 .foregroundStyle(.white, isSelected ? Color.accentColor : Color.secondary.opacity(0.8))
-                                .frame(width: notchSize == nil ? 46 : 22, height: notchSize == nil ? 46 : 22, alignment: .topLeading)
+                                .frame(width: 46, height: 46, alignment: .topLeading)
                                 .offset(x: -6, y: -6)
                                 .allowsHitTesting(false)
                                 .accessibilityHidden(true)
@@ -313,25 +271,23 @@ struct QuickLauncherView: View {
                     }
                 }
                 Text(title(for: item))
-                    .font(.system(size: notchSize == nil ? 10.5 : 10, weight: .medium))
+                    .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(2, reservesSpace: true)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, titleInset)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, notchSize == nil ? 9 : 4)
+            .padding(.vertical, 9)
             .background(
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .fill(notchSize != nil ? .clear : isSelected ? Color.accentColor.opacity(0.14)
+                    .fill(isSelected ? Color.accentColor.opacity(0.14)
                           : isHovered ? Color.primary.opacity(0.07)
                           : Color.primary.opacity(0.035))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .strokeBorder(notchSize != nil ? .clear
-                                  : isSelected ? Color.accentColor.opacity(0.55) : Color.clear,
+                    .strokeBorder(isSelected ? Color.accentColor.opacity(0.55) : Color.clear,
                                   lineWidth: 1.2)
             )
             .contentShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
@@ -364,7 +320,7 @@ struct QuickLauncherView: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(
-                                Capsule(style: .continuous).fill(notchSize != nil ? .black : Color.accentColor.opacity(0.13))
+                                Capsule(style: .continuous).fill(Color.accentColor.opacity(0.13))
                             )
                     }
                     .buttonStyle(.plain)
@@ -487,7 +443,7 @@ struct QuickLauncherView: View {
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(notchSize != nil ? .black : Color.primary.opacity(0.05))
+                .fill(Color.primary.opacity(0.05))
         )
     }
 
@@ -555,7 +511,6 @@ struct QuickLauncherView: View {
     }
 
     private func iconBackground(_ item: QuickLauncherItem, isSelected: Bool, isHovered: Bool) -> Color {
-        if notchSize != nil { return .white.opacity(isSelected || isHovered ? 0.14 : 0.065) }
         if isActive(item) { return Color.accentColor.opacity(0.18) }
         if isSelected || isHovered { return Color.primary.opacity(0.1) }
         return Color.primary.opacity(0.07)

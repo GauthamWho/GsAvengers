@@ -35,9 +35,9 @@ enum InputSourceSelection {
         return snapshots.first { $0.isASCIICapable && $0.isLayout }?.id
     }
 
-    /// The short code the island's layout notice shows: the source's first
-    /// language without its script or region, so "zh-Hans" reads as ZH. Empty
-    /// when a source claims no language, which leaves the notice its mark alone.
+    /// The short code for a source: its first language without its script or
+    /// region, so "zh-Hans" reads as ZH. Empty when a source claims no
+    /// language.
     static func shortCode(languages: [String]) -> String {
         guard let base = languages.first?.split(separator: "-").first else { return "" }
         return base.uppercased()
@@ -85,7 +85,7 @@ enum InputSourceSelection {
         }
     }
 
-    /// What the island's notice says about the source now typing: its id, so
+    /// What is known about the source now typing: its id, so
     /// a caller can tell one change from the next, its short code and the
     /// name the system itself shows in the Input menu.
     struct Reading: Equatable {

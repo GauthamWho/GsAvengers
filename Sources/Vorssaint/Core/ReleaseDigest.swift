@@ -133,15 +133,16 @@ struct ReleaseDigest {
         var seenTexts: Set<String> = []
         for release in releases {
             let names = release.sections.map { $0.title.trimmingCharacters(in: .whitespaces).lowercased() }
-            // Next to its own Added or Dynamic Island entries, a highlights
-            // list restates them in other words.
+            // Next to its own Added or Dynamic Island entries (older notes),
+            // a highlights list restates them in other words.
             let highlightsRepeat = names.contains { $0.hasPrefix("added") || $0 == "dynamic island" }
             for (section, name) in zip(release.sections, names) {
                 // Everything after "Everything from 3.3.3" repeats that release.
                 if name.hasPrefix("everything from") { break }
                 if highlightsRepeat && (name.hasSuffix("highlights") || name == "highlight") { continue }
                 guard let kind = ReleaseChangeKind(section: section.title) else { continue }
-                for text in section.bulletItems where seenTexts.insert(text).inserted {
+                for text in section.bulletItems where seenTexts.insert(text).inserted
+                    && !ReleaseChangeAliases.isAboutRemovedNotch(text, section: section.title) {
                     changes.append(ReleaseChange(
                         text: text, kind: kind, version: release.version,
                         features: ReleaseChangeAliases.features(inBullet: text, section: section.title),
@@ -207,9 +208,6 @@ enum WhatsNewInfo {
         "quickLauncher", "quickToggles", "colorPicker", "screenOCR", "cleaningMode", "mediaTools",
         "cleaner", "uninstaller", "homebrew", "appUpdates", "screenshot", "cameraPreview", "radialMenu",
         "scratchpad", "commandBar", "screenRecorder", "wallpaper", "killProcess", "portManager",
-        "notch", "notchCalendar", "notchNotifications", "notchGestures", "notchTimer", "notchAccessories",
-        "notchLyrics", "notchQueue", "notchLiveEqualizer", "notchDownloads", "notchAgents", "notchWatch",
-        "notchMascot",
         "monitorCPU", "monitorGPU", "monitorMemory", "monitorNetwork", "monitorDisk", "monitorPower",
         "connectedDevices", "fanControl",
     ]

@@ -137,7 +137,7 @@ final class TextSnippetService {
             shouldStopTapThread = false
             pendingTapRestart = false
             let thread = Thread { [weak self] in self?.runEventTap() }
-            thread.name = "Vorssaint Text Expansion"
+            thread.name = "G’s Mac Text Expansion"
             thread.qualityOfService = .userInteractive
             tapThread = thread
             return thread
@@ -440,7 +440,7 @@ final class TextSnippetService {
     }
 
     /// Whether one of this app's windows takes the keys. A panel that never
-    /// activates the app, like the island's scratchpad, is key while the app
+    /// activates the app, like the scratchpad, is key while the app
     /// behind it stays frontmost, and that app's field is not where the
     /// backspaces land. AppKit is read on the main thread, where both
     /// expansion paths post their backspaces; anywhere else counts as ours,

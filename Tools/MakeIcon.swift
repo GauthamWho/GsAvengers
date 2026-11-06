@@ -6,8 +6,8 @@
 //   adaptive source (Resources/Brand/AppIcon-Default.png)
 // - the menu bar template glyph and BrandMark from the wordmark master
 //   (Resources/Brand/logo.png)
-// AppIcon-Default.png is a hand-exported twin of Resources/Brand/AppIcon.icon;
-// re-export it whenever the Icon Composer project changes. The build cannot read
+// AppIcon-Default.png, logo.png and the AppIcon.icon SVG all come from
+// Tools/MakeBrandLogo.swift (the "GsA" monogram); rerun it to change the logo. The build cannot read
 // .icon bundles directly: actool exists only inside full Xcode 26, and the
 // supported local floor is Command Line Tools alone.
 import AppKit

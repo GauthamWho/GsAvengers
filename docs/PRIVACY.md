@@ -1,5 +1,13 @@
 # Privacy
 
+## G's Avengers in short
+
+- **No servers.** Every Vorssaint online service is switched off in this build (`AppInfo.remoteServicesEnabled = false`): no update checks, no screenshot or recording share links, no feedback uploads. The clipboard helper does not check for updates either.
+- **Sharing stays on your home network.** The Mac and the Windows PC find each other with a local broadcast and talk directly over an encrypted link. Nothing goes through the internet, and no account exists.
+- **Typing is never recorded.** Keys from the Windows PC are turned into Mac key presses and forgotten. Clipboard history stays on your Mac.
+
+The rest of this page is the upstream Vorssaint privacy text for the features G's Avengers inherits; where it mentions Vorssaint-operated services, those are off here.
+
 Vorssaint is built to be local-first. Core features run on your Mac, and the app has no Vorssaint account or cloud dashboard. Its Vorssaint-operated services are limited to temporary screenshot and recording links and feedback you explicitly choose to send.
 
 ## The short version

@@ -5,12 +5,21 @@ import Foundation
 
 /// Static identity of the app, shared by UI, notifications and tooling.
 enum AppInfo {
-    static let name = "Vorssaint"
-    static let copyright = "© 2026 Vorssaint"
+    static let name = "G’s Mac"
+    static let copyright = "© 2026 GauthamWho · based on Vorssaint (GPL-3.0)"
     static let websiteURL = URL(string: "https://vorssaint.com")!
     static let repositoryURL = URL(string: "https://github.com/vorssaint/vorssaint-utils")!
     static let coffeeURL = URL(string: "https://buymeacoffee.com/vorssaint")!
     static let discordURL = URL(string: "https://discord.gg/M6BwWH4BJp")!
+    /// G’s Mac never talks to Vorssaint's servers (update feed, share links,
+    /// feedback, showcase video, price list). Off until G’s Mac has its own
+    /// endpoints and Gautham approves each one.
+    static let remoteServicesEnabled = false
+
+    /// Vorssaint's own GitHub, donate and support screens stay hidden: G’s Mac
+    /// credits Vorssaint only in the copyright line.
+    static let upstreamLinksEnabled = false
+
     static let socialURL = URL(string: "https://x.com/vorssaint")!
 
     /// The bundle version. The fallback only applies to the bare binary

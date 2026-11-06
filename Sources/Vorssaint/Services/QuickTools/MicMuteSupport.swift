@@ -7,13 +7,12 @@ import Foundation
 /// calls so they can be pinned down by tests: which devices the mute has to
 /// reach, which ones it must never touch, and how a device gets its level back.
 enum MicMuteSupport {
-    /// The app's own private aggregate devices: the mixer's, the island's
-    /// level reader's and the recorder's. Each carries a tapped app's audio,
+    /// The app's own private aggregate devices: the mixer's, the AirPlay
+    /// route's and the recorder's. Each carries a tapped app's audio,
     /// not a microphone, and muting one would silence the very thing it is
     /// rendering or reading; a private aggregate is still listed to the
     /// process that created it, so every device list skips them by name.
-    static let ownDeviceNames: Set<String> = ["Vorssaint Mixer", "Vorssaint AirPlay", "Vorssaint Island Levels",
-                                              "Vorssaint Recorder"]
+    static let ownDeviceNames: Set<String> = ["G’s Mac Mixer", "G’s Mac AirPlay", "G’s Mac Recorder"]
 
     /// The level a device falls back to when nothing was ever saved for it:
     /// loud enough to be usable, quiet enough not to startle.

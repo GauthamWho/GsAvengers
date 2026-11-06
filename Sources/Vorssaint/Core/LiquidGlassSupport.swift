@@ -13,9 +13,8 @@ enum LiquidGlassSupport {
         return false
     }
 
-    /// Select the preference for the surface that owns the mixer.
-    static func isEnabled(inNotch: Bool, windows: Bool, island: Bool) -> Bool {
-        guard isSupported else { return false }
-        return inNotch ? island : windows
+    /// Glass for a window surface: the windows preference, where supported.
+    static func isEnabled(windows: Bool) -> Bool {
+        isSupported && windows
     }
 }

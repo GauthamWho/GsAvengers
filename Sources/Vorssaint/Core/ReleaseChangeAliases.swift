@@ -13,30 +13,27 @@ import Foundation
 ///    They look like an alias but mean something else, and never count as
 ///    island context.
 /// 2. Aliases match whole words. A plain alias ignores letter case; `.exact`
-///    must match its capitalization ("Watch" the feature, not "watch" the
-///    verb). Longer aliases go first and claim their words, so "Dock
-///    previews" is never also read as a shorter alias inside it.
-/// 3. `.island` aliases count only in an island context: the section title
-///    or the bullet says island, islands, notch, camera cutout or beside the
-///    camera. "calendar", "timer" or "downloads" alone are too common.
-/// 4. Family aliases ("System monitor", "mouse settings") name a whole
+///    must match its capitalization ("Shelf" the feature). Longer aliases go
+///    first and claim their words, so "Dock previews" is never also read as a
+///    shorter alias inside it.
+/// 3. Family aliases ("System monitor", "mouse settings") name a whole
 ///    Settings page. They report every feature of the family, but only when
 ///    no feature of that page matched on its own.
-/// 5. The section title is matched the same way, so "### Dynamic Island"
-///    implies `.notch` and "### Added (switcher)" implies `.switcher`.
+/// 4. The section title is matched the same way, so "### Added (switcher)"
+///    implies `.switcher`.
+/// 5. A bullet or section about the notch (island, islands, notch, camera
+///    cutout, beside the camera) is about a part the app no longer has, so it
+///    names no feature, even where it mentions one as a place.
 /// A bullet that matches nothing is app-wide (Settings, menu bar panel,
-/// languages, updates). Dynamic Island extensions are reported as
-/// themselves; the window rolls them up under the Dynamic Island row.
+/// languages, updates).
 enum ReleaseChangeAliases {
     struct Alias: Hashable, ExpressibleByStringLiteral {
         let text: String
         let matchesCase: Bool
-        let needsIsland: Bool
 
-        init(_ text: String, matchesCase: Bool = false, needsIsland: Bool = false) {
+        init(_ text: String, matchesCase: Bool = false) {
             self.text = text
             self.matchesCase = matchesCase
-            self.needsIsland = needsIsland
         }
 
         init(stringLiteral value: String) {
@@ -46,8 +43,6 @@ enum ReleaseChangeAliases {
         /// Matches only with this exact capitalization.
         static func exact(_ text: String) -> Alias { Alias(text, matchesCase: true) }
 
-        /// Matches only when the bullet or its section is about the island.
-        static func island(_ text: String) -> Alias { Alias(text, needsIsland: true) }
     }
 
     struct Family {
@@ -89,12 +84,12 @@ enum ReleaseChangeAliases {
         case .superKey: return ["super key"]
         case .quitWindowProtection: return ["quit protection", "quit & close protection",
             "quit and close protection", "command q and command w"]
-        case .clipboardHistory: return ["clipboard history", .exact("Clipboard"), .island("clipboard"),
+        case .clipboardHistory: return ["clipboard history", .exact("Clipboard"),
             "clear unpinned", "clipboard previews", "clipboard items"]
         case .pastePlain: return ["paste as plain text", "paste plain text"]
         case .finderCutPaste: return ["cut & paste", "cut and paste", "cut files", "finder cut", "cut operations"]
         case .finderRename: return ["finder shortcuts", "rename shortcut", "renames selected files"]
-        case .shelf: return [.exact("Shelf"), .island("shelf"), "drop zone", "docked shelf", "temporary shelf",
+        case .shelf: return [.exact("Shelf"), "drop zone", "docked shelf", "temporary shelf",
             "on the shelf", "shelf files"]
         case .urlCleaner: return ["clean url", "url cleaner", "url cleaning"]
         case .diskImageInstaller: return ["disk image installer", "disk images", "disk image",
@@ -139,28 +134,7 @@ enum ReleaseChangeAliases {
         case .wallpaper: return [.exact("Wallpaper"), "wallpaper gallery", "wallpapers"]
         case .killProcess: return ["kill process", "force kill", "process tree"]
         case .portManager: return ["port manager"]
-        case .notch: return ["dynamic island", "island", "islands", "notch", "volume keys", "volume key",
-            "mute key", "volume feedback", "volume indicator", "volume notice", "new track indicator",
-            "displays without a notch", "displays without a camera cutout"]
-        case .notchCalendar: return [.island("calendar"), "event countdown", "event countdowns", "week numbers",
-            "calendar indicator", .island("appointment"), .island("appointments"), .island("next event"),
-            .island("upcoming event")]
-        case .notchNotifications: return [.island("notifications"), .island("notification"), "notification banners",
-            "system banner"]
-        case .notchGestures: return ["dynamic island gestures", .island("gestures"), .island("gesture")]
-        case .notchTimer: return [.exact("Timer"), .exact("Timers"), .island("timer"), .island("timers"),
-            "pomodoro", "stopwatch", "focus cycles"]
-        case .notchAccessories: return ["accessory alerts", "accessory notices", .island("accessory")]
-        case .notchLyrics: return ["lyrics", "lyric"]
-        case .notchQueue: return ["up next", .island("queue")]
-        case .notchLiveEqualizer: return ["bars follow the music", "live music bars",
-            "music bars that follow playback"]
-        case .notchDownloads: return [.island("downloads"), .island("download"), "safari downloads",
-            "downloads folder", "downloads page", "completed download", "completed downloads"]
-        case .notchAgents: return ["ai agents", "ai agent", "claude code", "claude code timer", "codex", "ai usage",
-            "opencode", "github copilot", .island("agent"), .island("agents")]
-        case .notchWatch: return [.exact("Watch")]
-        case .notchMascot: return ["companion"]
+        case .quickRing: return ["quick ring", "ring at the pointer", "ring at the mouse"]
         case .monitorCPU: return ["cpu temperature", "cpu load", "cpu readings", "per core", "per-core",
             "processor temperature", "process breakdowns", "cpu alert", "cpu and gpu temperatures"]
         case .monitorGPU: return ["gpu usage", "gpu load", "gpu temperature", "gpu temperatures",
@@ -218,8 +192,9 @@ enum ReleaseChangeAliases {
     /// Features the bullet is about, in AppFeature declaration order.
     /// Empty means an app-wide change.
     static func features(inBullet text: String, section: String) -> [AppFeature] {
-        let sectionMatch = match(section, islandContext: nil)
-        let textMatch = match(text, islandContext: sectionMatch.islandContext ? true : nil)
+        let sectionMatch = match(section)
+        let textMatch = match(text)
+        guard !sectionMatch.islandContext, !textMatch.islandContext else { return [] }
         let specific = sectionMatch.features.union(textMatch.features)
         var found = specific
         for index in sectionMatch.families.union(textMatch.families).sorted() {
@@ -228,13 +203,13 @@ enum ReleaseChangeAliases {
                 found.formUnion(family.members)
             }
         }
-        // Under a Dynamic Island section, other tools are named as a place
-        // or a part of the island ("can carry the Command Bar out of the
-        // island"), not as what changed.
-        if sectionMatch.features.contains(.notch) {
-            found = found.filter { $0.group == .dynamicIsland }
-        }
         return AppFeature.allCases.filter { found.contains($0) }
+    }
+
+    /// Whether the bullet, or the section it sits in, is about the notch the
+    /// app no longer has. Such entries are left out of the digest entirely.
+    static func isAboutRemovedNotch(_ text: String, section: String) -> Bool {
+        match(section).islandContext || match(text).islandContext
     }
 
     /// Whether the bullet also changes something every person has.
@@ -342,13 +317,13 @@ enum ReleaseChangeAliases {
         return lower
     }
 
-    private static func match(_ string: String, islandContext forced: Bool?)
+    private static func match(_ string: String)
         -> (features: Set<AppFeature>, families: Set<Int>, islandContext: Bool) {
         let text = Scalars(string)
         var claimed = ignoredPatterns
             .filter { text.mayContain($0, matchingCase: false) }
             .flatMap { ranges(of: $0.scalars, in: text.folded) }
-        let islandContext = forced ?? islandPatterns.contains { word in
+        let islandContext = islandPatterns.contains { word in
             text.mayContain(word, matchingCase: false)
                 && ranges(of: word.scalars, in: text.folded).contains { range in
                     !claimed.contains { $0.overlaps(range) }
@@ -356,8 +331,7 @@ enum ReleaseChangeAliases {
         }
         var features: Set<AppFeature> = []
         var familyHits: Set<Int> = []
-        for entry in entries where (islandContext || !entry.alias.needsIsland)
-            && text.mayContain(entry.pattern, matchingCase: entry.alias.matchesCase) {
+        for entry in entries where text.mayContain(entry.pattern, matchingCase: entry.alias.matchesCase) {
             for range in ranges(of: entry.pattern.scalars, in: text.haystack(for: entry.alias))
             where !claimed.contains(where: { $0.overlaps(range) }) {
                 claimed.append(range)

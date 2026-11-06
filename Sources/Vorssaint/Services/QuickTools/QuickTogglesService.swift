@@ -41,7 +41,7 @@ final class QuickTogglesService: ObservableObject {
     @Published private(set) var othersShortcutRegistrationFailed = false
     @Published private(set) var quitAllExceptions: [String] = []
 
-    private let workQueue = DispatchQueue(label: "com.vorssaint.utils.quick-toggles", qos: .userInitiated)
+    private let workQueue = DispatchQueue(label: "com.gauthamwho.gsmac.quick-toggles", qos: .userInitiated)
     private let hotkey = QuickToolHotkey(id: 63)
     private let othersHotkey = QuickToolHotkey(id: 62)
 
@@ -126,10 +126,8 @@ final class QuickTogglesService: ObservableObject {
         alert.informativeText = strings.emptyTrashConfirmMessage
         alert.addButton(withTitle: strings.emptyTrashConfirmButton)
         alert.addButton(withTitle: L10n.shared.s.uninstallerCancel)
-        let island = NotchService.shared.presentationWindow
-        let fromIsland = island?.isVisible == true
-            && (NSApp.currentEvent?.window === island || NSApp.keyWindow === island)
-        guard NotchIslandAlert.run(alert, above: fromIsland ? island : nil) == .alertFirstButtonReturn else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
         emptyTrashConfirmed()
     }
 

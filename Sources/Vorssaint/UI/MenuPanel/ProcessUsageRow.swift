@@ -9,7 +9,6 @@ struct ProcessUsageRow: View {
     var iconSize: CGFloat = 15
     var leadingPadding: CGFloat = 0
 
-    @Environment(\.notchPresentation) private var inNotch
     @ObservedObject private var l10n = L10n.shared
 
     var body: some View {
@@ -19,7 +18,7 @@ struct ProcessUsageRow: View {
                     .contextMenu {
                         Button(FeatureStrings.killProcess(l10n.language).forceKillButton,
                                role: .destructive) {
-                            ProcessUsageService.shared.confirmForceQuit(row, inNotch: inNotch)
+                            ProcessUsageService.shared.confirmForceQuit(row)
                         }
                         .disabled(!ProcessUsageService.shared.canForceQuit(row))
                     }

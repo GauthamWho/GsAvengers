@@ -127,7 +127,7 @@ struct SwitcherSettings: View {
             }
             Group {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(FeatureStrings.notchEditor(l10n.language).layout)
+                    Text(FeatureStrings.shared(l10n.language).layout)
                         .font(.subheadline.weight(.medium))
                     HStack(spacing: 10) {
                         SwitcherLayoutChoice(layout: .windows, title: pages.switcherLayoutWindows,

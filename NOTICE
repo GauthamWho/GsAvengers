@@ -1,0 +1,30 @@
+G's Avengers
+Copyright (C) 2026 GauthamWho
+
+This repository contains two kinds of code under two different licences.
+
+1. The main Mac app — GPL-3.0-or-later
+   Everything OUTSIDE Modules/GsShare and Modules/GsClipboard (Sources/,
+   Tests/, Tools/, Resources/, build.sh, Package.swift, ...) is a modified
+   version of Vorssaint (https://github.com/vorssaint/vorssaint-utils),
+   Copyright (C) Vorssaint and its contributors, licensed under the GNU
+   General Public License, version 3 or (at your option) any later version.
+   GauthamWho's changes to it are licensed under the same terms. See LICENSE.
+   Anyone may use, study, change and share this part under the GPL, which
+   includes the right to rebuild it. "Vorssaint" is a trademark of its
+   maintainer; this fork uses its own name, icon and bundle identifiers
+   (see TRADEMARKS.md).
+
+2. The sharing and clipboard helpers — all rights reserved
+   Modules/GsShare (the Mac sharing helper and the Windows app) and
+   Modules/GsClipboard (clipboard history and emoji) are original work by
+   GauthamWho. They contain no Vorssaint code. They are source-available
+   for reading only, with personal use of the official builds allowed; no
+   copying, modification, redistribution or derivative works without
+   written permission. See the LICENSE file inside each of those folders.
+
+How they fit together
+   The helpers are separate programs. The release puts them inside the
+   G's Avengers app bundle as their own executables (Contents/Library/
+   LoginItems), and they talk to the main app only through system
+   notifications. They are not compiled into the GPL program.

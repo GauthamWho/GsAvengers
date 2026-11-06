@@ -92,12 +92,6 @@ enum SettingsDirectory {
             default: return item.destination.page == .monitor
             }
         }
-        // The companion lives in the island, and its settings in a tab of the
-        // island's page rather than a row of their own.
-        let islandPages: Set<SettingsSidebarItem.ID> = [.page(.notch)]
-        let island = grouped.first(where: { $0.id == 4 })?.items.filter {
-            islandPages.contains($0.id)
-        } ?? []
         let sound: [SettingsSidebarItem] = essentials.items.filter { item in
             item.destination.page == .general
                 && item.destination.sectionAnchor != nil
@@ -110,12 +104,10 @@ enum SettingsDirectory {
             grouped.first(where: { $0.id == id })?.items ?? []
         }
         let byGroup = SettingsSidebarSupport.featureGroupRows(
-            windowsControls: rows(1), utilities: rows(4).filter {
-                !islandPages.contains($0.id) && $0.id != .page(.notchMascot)
-            })
+            windowsControls: rows(1), utilities: rows(4))
         let featured = [
             SettingsSidebarSection(id: 0, title: categories.essentials,
-                                   items: Array(core.prefix(3)) + island + Array(core.dropFirst(3))),
+                                   items: core),
             SettingsSidebarSection(id: 4, title: categories.utilities, items: byGroup.utilities),
             SettingsSidebarSection(id: 6, title: hub.groupSound, items: sound + byGroup.sound),
             SettingsSidebarSection(id: 7, title: hub.groupEnergyDisplay, items: energy),
@@ -329,13 +321,20 @@ enum SettingsDirectory {
                                        ]),
                 SettingsDirectoryItem(page: .shelf, title: s.shelfName, icon: "tray.full",
                                       keywords: [s.shelfEnable, s.shelfDropZoneToggle, s.shelfEdgeToggle,
-                                                 s.shelfClearOnClose, s.shelfShortcutFinderSelection,
-                                                 FeatureStrings.notch(language).title,
-                                                 FeatureStrings.notchEditor(language).separate]),
+                                                 s.shelfClearOnClose, s.shelfShortcutFinderSelection]),
                 SettingsDirectoryItem(page: .media, title: s.mediaName, icon: "photo.on.rectangle.angled",
                                       keywords: ["PDF", "GIF", "PNG", "JPEG", "convert", "resize", "watermark",
                                                  "rename", "profile", "fit", "fill", "crop",
                                                  s.mediaStartConvertPDF, s.ocrName]),
+                SettingsDirectoryItem(page: .helperClipboard,
+                                      title: FeatureStrings.helperApps(language).clipboardTitle + " (fn V)",
+                                      icon: "list.clipboard",
+                                      keywords: ["fn V", "fn E", FeatureStrings.helperApps(language).openEmoji]),
+                SettingsDirectoryItem(page: .windowsSharing,
+                                      title: FeatureStrings.helperApps(language).sharingTitle,
+                                      icon: "display.2",
+                                      keywords: ["Windows", FeatureStrings.helperApps(language).keyboardRules,
+                                                 FeatureStrings.helperApps(language).pairShowCode]),
             ]),
             // Everything about the apps installed on the Mac lives together:
             // what is out of date, what is junk and what should go.
@@ -364,28 +363,6 @@ enum SettingsDirectory {
                                       keywords: ["port", "ports", "listening", "socket", "PID", "kill port"]),
             ]),
             (categories.utilities, [
-                SettingsDirectoryItem(page: .notch,
-                                      title: FeatureStrings.notch(language).title,
-                                      icon: "macbook",
-                                      keywords: [FeatureStrings.notch(language).description,
-                                                 FeatureStrings.notchEditor(language).hideMenuBarIcon,
-                                                 FeatureStrings.notchActivities(language).keepAwakeActivity,
-                                                 FeatureStrings.notchActivities(language).hideTimerCountdown,
-                                                 FeatureStrings.notchCalendar(language).weekNumbers,
-                                                 "notch", "camera", "music", "clipboard",
-                                                 FeatureStrings.notchAgents(language).title, "Claude", "Codex", "OpenCode", "GitHub Copilot", "AI", "tokens",
-                                                 FeatureStrings.notchAgents(language).resetsCard,
-                                                 FeatureStrings.notchLockScreen(language).title,
-                                                 FeatureStrings.notchLockScreen(language).sounds]
-                                          // The fit card only appears with a camera housing to fit.
-                                          + (NotchSupport.hasNotchedDisplay ? [FeatureStrings.notch(language).cameraFit] : [])
-                                          + (NotchSupport.hasDisplayWithoutNotch
-                                             ? [FeatureStrings.notch(language).withoutNotch,
-                                                FeatureStrings.notch(language).capsuleFit] : [])),
-                SettingsDirectoryItem(page: .notchMascot,
-                                      title: FeatureStrings.notchMascot(language).title,
-                                      icon: AppFeature.notchMascot.symbolName,
-                                      keywords: FeatureStrings.notchMascot(language).searchKeywords),
                 SettingsDirectoryItem(page: .commandBar,
                                       title: FeatureStrings.commandBar(language).pageTitle,
                                       icon: "command",
@@ -414,6 +391,10 @@ enum SettingsDirectory {
                                          [FeatureStrings.wallpaper(language).pageTitle]),
                                         (.scratchpad, [FeatureStrings.scratchpad(language).pageTitle]),
                                         (.cleaningMode, [s.cleaningMenuItem, s.cleaningKeepScreenVisibleToggle]),
+                                        (.quickRing, [FeatureStrings.quickRing(language).title,
+                                                      FeatureStrings.quickRing(language).controlDoubleTap,
+                                                      FeatureStrings.quickRing(language).controlClick,
+                                                      FeatureStrings.quickRing(language).middleClick]),
                                        ]),
                 SettingsDirectoryItem(page: .screenshot,
                                        title: FeatureStrings.screenshot(language).screenCaptureTitle,
@@ -449,11 +430,12 @@ enum SettingsDirectory {
                                       keywords: [s.hotkeyToggle]),
                 SettingsDirectoryItem(page: .advanced, title: s.tabAdvanced, icon: "wrench.and.screwdriver"),
                 SettingsDirectoryItem(page: .about, title: s.tabAbout, icon: "info.circle",
-                                      keywords: [s.reviewIntro, s.reviewHighlights]),
+                                      keywords: [s.reviewIntro]),
                 SettingsDirectoryItem(page: .releaseNotes, title: s.tabReleaseNotes, icon: "sparkles"),
+            ] + (AppInfo.upstreamLinksEnabled ? [
                 SettingsDirectoryItem(page: .support, title: s.tabSupport, icon: "heart.fill",
                                       keywords: [s.donateButton, s.supportIntroStarButton]),
-            ]),
+            ] : [])),
         ]
     }
 }

@@ -69,21 +69,13 @@ enum MixerOutputAdjustmentContract {
     }
 
     struct Panel {
-        let inNotch: Bool
         let mixer: Mixer
-    }
-    final class NotchService {
-        enum Module { case volume }
-        static let shared = NotchService()
-        var ownVolumeAdjustments = 0
-        func noteOwnLevelAdjustment(_ module: Module) { ownVolumeAdjustments += 1 }
     }
 
     static func run(_ suite: TestSuite) {
         func make() -> Mixer {
             DispatchQueue.main = Queue()
             Hardware.reset()
-            NotchService.shared.ownVolumeAdjustments = 0
             let mixer = Mixer()
             mixer.selectOutput(1, volume: 0.2, muted: false)
             return mixer
@@ -452,7 +444,7 @@ enum MixerOutputAdjustmentContract {
         mixer = make()
         completions = []
         Hardware.volume = 0.015625
-        mixer.requestOutputStep(level: { NotchSupport.volumeLevel(current: $0, direction: -1, fine: true) }) {
+        mixer.requestOutputStep(level: { _ in 0 }) {
             completions.append($0.handled)
         }
         finish(mixer)
@@ -462,7 +454,7 @@ enum MixerOutputAdjustmentContract {
                      "a volume key stepping down to zero mutes the output and stays handled")
         Hardware.volume = 0
         Hardware.muted = true
-        mixer.requestOutputStep(level: { NotchSupport.volumeLevel(current: $0, direction: 1, fine: false) }) {
+        mixer.requestOutputStep(level: { _ in 0.0625 }) {
             completions.append($0.handled)
         }
         finish(mixer)
@@ -474,7 +466,7 @@ enum MixerOutputAdjustmentContract {
         mixer = make()
         completions = []
         Hardware.volume = 0.03125
-        mixer.requestOutputStep(level: { NotchSupport.volumeLevel(current: $0, direction: -1, fine: true) }) {
+        mixer.requestOutputStep(level: { _ in 0.015625 }) {
             completions.append($0.handled)
         }
         finish(mixer)
@@ -485,7 +477,7 @@ enum MixerOutputAdjustmentContract {
         mixer = make()
         completions = []
         Hardware.volume = 0.0627
-        mixer.requestOutputStep(level: { NotchSupport.volumeLevel(current: $0, direction: -1, fine: false) }) {
+        mixer.requestOutputStep(level: { _ in 0 }) {
             completions.append($0.handled)
         }
         finish(mixer)
@@ -1039,9 +1031,9 @@ enum MixerOutputAdjustmentContract {
                      && Hardware.writes == writesAtSliderTimeout && Hardware.volume == 0.45,
                      "an external volume change needs no stale slider acknowledgement before a new native key")
 
-        for inNotch in [false, true] {
+        do {
             mixer = make()
-            let panel = Panel(inNotch: inNotch, mixer: mixer)
+            let panel = Panel(mixer: mixer)
             keyResult = nil
             mixer.requestOutputStep(level: step(0.1)) { keyResult = $0 }
             panel.setSystemOutputVolume(0.7)
@@ -1049,9 +1041,8 @@ enum MixerOutputAdjustmentContract {
                          "the real panel slider publishes immediately while its write waits on the queue")
             finish(mixer)
             suite.expect(keyResult == .superseded
-                         && Hardware.writes.compactMap(\.volume) == [0.7]
-                         && NotchService.shared.ownVolumeAdjustments == (inNotch ? 1 : 0),
-                         "the real \(inNotch ? "notch" : "menu bar") panel slider supersedes an older key")
+                         && Hardware.writes.compactMap(\.volume) == [0.7],
+                         "the real menu bar panel slider supersedes an older key")
             suite.expectClose(mixer.systemOutputVolume ?? -1, 0.7,
                               "the real panel slider keeps its final value after the old key settles")
         }

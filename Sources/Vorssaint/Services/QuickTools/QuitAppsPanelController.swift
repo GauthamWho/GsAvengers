@@ -71,7 +71,7 @@ final class QuitAppsPanelController {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.hidesOnDeactivate = false
-        // The originating island can stay pinned above the status bar.
+        // Above the status bar, so the menu bar panel it came from never covers it.
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 2)
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary,
                                     .transient, .ignoresCycle]
