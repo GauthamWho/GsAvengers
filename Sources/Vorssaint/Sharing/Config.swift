@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
 // G's Avengers — saved settings (~/Library/Application Support/GsAvengers/config.json)
 import Foundation
 

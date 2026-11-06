@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
 // G's Avengers — crypto (must match windows/src/Crypto.cs byte for byte; spec in docs/PROTOCOL.md)
 import CommonCrypto
 import CryptoKit

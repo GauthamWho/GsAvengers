@@ -459,6 +459,10 @@ enum Defaults {
         DefaultsKey.quickRingControlDoubleTap: true,
         // Off on a fresh install: each takes a click away from the apps.
         DefaultsKey.gsavClipboardHelperEnabled: true,
+        DefaultsKey.sharingEnabled: true,
+        // The Windows habits a new Mac starts with (the old one-screen setup's defaults).
+        DefaultsKey.autoQuitEnabled: true,
+        DefaultsKey.finderCutPasteEnabled: true,
         DefaultsKey.recorderShortcutEnabled: false,
         DefaultsKey.recorderShortcut: GlobalShortcut.screenRecorderDefault.storageValue,
         DefaultsKey.recorderCountdown: 3,
@@ -531,8 +535,8 @@ enum Defaults {
         DefaultsKey.screenshotPreviewEnabled: true,
         DefaultsKey.screenshotPreviewDuration: ScreenshotSupport.defaultConfirmationPreviewDuration,
         DefaultsKey.screenshotSharingEnabled: true,
-        DefaultsKey.windowLayoutShortcutsEnabled: false,
-        DefaultsKey.windowEdgeSnapEnabled: false,
+        DefaultsKey.windowLayoutShortcutsEnabled: true,
+        DefaultsKey.windowEdgeSnapEnabled: true,
         DefaultsKey.windowEdgeSnapDisabledZones: "",
         DefaultsKey.windowEdgeSnapZoneActions: "",
         DefaultsKey.windowLayoutShortcutLeft: GlobalShortcut.windowLayoutLeftDefault.storageValue,

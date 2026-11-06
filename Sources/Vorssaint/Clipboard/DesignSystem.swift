@@ -1,4 +1,5 @@
-// Gautham's Clipboard by GauthamWho. Copyright © 2026 GauthamWho. All rights reserved. See LICENSE.
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
 import SwiftUI
 import AppKit
 
@@ -85,7 +86,7 @@ enum Brand {
     static let paperEdge = Color(red: 0.78, green: 0.84, blue: 0.95) // #C7D6F2
     static let name = "Gautham's Clipboard"
     static let maker = "GauthamWho"
-    static let copyright = "© 2026 GauthamWho. All rights reserved."
+    static let copyright = "© 2026 GauthamWho · GPL-3.0-or-later"
 }
 
 /// Small uppercase section label.

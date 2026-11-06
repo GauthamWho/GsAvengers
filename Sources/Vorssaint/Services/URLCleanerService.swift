@@ -37,7 +37,7 @@ final class URLCleanerService: ObservableObject {
         let cleaned: URLCleaning.Result?
     }
 
-    private var timer: Timer?
+    private var watching = false
     private var lastChangeCount = 0
     private var pollInFlight = false
     private var pollToken: PollToken?
@@ -75,23 +75,20 @@ final class URLCleanerService: ObservableObject {
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        PasteboardWatch.shared.unsubscribe("urlCleaner")
+        watching = false
         cancelPoll()
         isRunning = false
     }
 
     private func start() {
-        guard timer == nil else {
+        guard !watching else {
             isRunning = true
             return
         }
-        let timer = Timer(timeInterval: 0.8, repeats: true) { [weak self] _ in
-            self?.cleanClipboardIfNeeded()
-        }
-        timer.tolerance = 0.25
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        // Only an actual pasteboard change wakes the cleaner.
+        PasteboardWatch.shared.subscribe("urlCleaner") { [weak self] in self?.cleanClipboardIfNeeded() }
+        self.watching = true
         isRunning = true
         baselinePasteboard()
     }

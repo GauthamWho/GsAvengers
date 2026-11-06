@@ -43,6 +43,14 @@ namespace GsAvengers
                 link.Send(Msg.Key, Link.KeyMsg(0x20, 0x39, false, false)); Thread.Sleep(50);
                 link.Send(Msg.Key, Link.KeyMsg(0xA2, 0x1D, false, false));
             }
+            if (script == "shift")
+            {
+                // A harmless key check: Shift down and up, then F13 (no default action on a Mac).
+                link.Send(Msg.Enter, Link.EdgeRatio(1, 0.5f)); Thread.Sleep(300);
+                Key(link, 0xA0, true); Key(link, 0xA0, false);
+                Tap(link, 0x7C);
+                Console.WriteLine("keys sent"); Console.Out.Flush();
+            }
             if (script == "shortcuts")
             {
                 // Run with an empty TextEdit document in front. Checks Windows habits end to end.

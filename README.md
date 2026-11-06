@@ -161,12 +161,9 @@ Open an [issue](https://github.com/GauthamWho/GsAvengers/issues) or start a [Dis
 
 ## Licence
 
-This repository has **two licences**, explained in plain words in [NOTICE](NOTICE):
-
-- **The main Mac app** (everything outside `Modules/GsShare` and `Modules/GsClipboard`) is a modified version of [Vorssaint](https://github.com/vorssaint/vorssaint-utils) and is licensed under **GPL-3.0-or-later** ([LICENSE](LICENSE)). The GPL lets anyone use, study, change, rebuild and share this part under the same licence. That cannot be taken away, because it is built on GPL code.
-- **The sharing app (Mac + Windows) and the clipboard helper** (`Modules/GsShare`, `Modules/GsClipboard`) are GauthamWho's own original code: **all rights reserved**, source-available for reading, free for personal use (official builds, or your own unmodified build); no copying, modifying, redistributing or derivative works without permission ([GsShare licence](Modules/GsShare/LICENSE), [GsClipboard licence](Modules/GsClipboard/LICENSE)).
+The whole app is **GPL-3.0-or-later** ([LICENSE](LICENSE)), copyright **GauthamWho**: the Mac app, the sharing and clipboard code that runs inside it, and the Windows app ([NOTICE](NOTICE)). Anyone may use, study, change, rebuild and share it under the same licence.
 
 ## Credits
 
 - Built on **[Vorssaint](https://github.com/vorssaint/vorssaint-utils)** by Vorssaint and its contributors (GPL-3.0-or-later): the menu-bar app, switcher, window tools, capture, recorder and much more come from there. Thank you! "Vorssaint" is their trademark; this fork uses its own name, icon and identifiers ([TRADEMARKS.md](TRADEMARKS.md)).
-- G's Avengers, the sharing app, the clipboard helper and the Frost window: **[GauthamWho](https://github.com/GauthamWho)**.
+- G's Avengers, Windows sharing, clipboard history and the Frost window: **[GauthamWho](https://github.com/GauthamWho)**.

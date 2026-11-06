@@ -1,4 +1,5 @@
-// Gautham's Clipboard by GauthamWho. Copyright © 2026 GauthamWho. All rights reserved. See LICENSE.
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
 import AppKit
 import Carbon.HIToolbox
 import Combine

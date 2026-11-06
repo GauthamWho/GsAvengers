@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
+
 import AppKit
 import ImageIO
 
 @MainActor
 final class ClipboardMonitor {
     private let store: ClipStore
-    private var timer: Timer?
+    private var watching = false
     private var lastChangeCount: Int
     var ignoreNextChange = false
     /// Changes up to this change count were written by us (an emoji paste and the restore after it).
@@ -20,20 +23,17 @@ final class ClipboardMonitor {
 
     func start() {
         lastChangeCount = NSPasteboard.general.changeCount
-        // macOS posts no notification when the pasteboard changes; reading its
-        // change count (one integer) twice a second is the lightest way to see copies.
-        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+        // One shared, change-only pasteboard watch (see PasteboardWatch).
+        PasteboardWatch.shared.subscribe("clipboardHistory") { [weak self] in
             MainActor.assumeIsolated { self?.poll() }
         }
-        timer.tolerance = 0.2
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        self.watching = true
         Diag.log("monitor started (changeCount=\(lastChangeCount))")
     }
 
     func stop() {
-        timer?.invalidate()
-        timer = nil
+        PasteboardWatch.shared.unsubscribe("clipboardHistory")
+        watching = false
     }
 
     private func poll() {

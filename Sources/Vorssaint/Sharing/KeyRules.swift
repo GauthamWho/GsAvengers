@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
 // G's Avengers — the Windows-keyboard-on-a-Mac translation table.
 // One pure function: Windows key + held Windows modifiers + front app -> what the Mac should get.
 // No CGEvents here (Injector.swift posts them), so every rule is unit-tested in mac/Tests.

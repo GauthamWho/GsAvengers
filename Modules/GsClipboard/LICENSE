@@ -1,41 +1,19 @@
-G's Avengers — Clipboard
-Copyright (C) 2026 GauthamWho. All rights reserved.
+G's Avengers — Clipboard (code now in Sources/Vorssaint/Clipboard)
+Copyright (C) 2026 GauthamWho
 
-This folder (Modules/GsClipboard) is original work by GauthamWho. It contains no code
-from Vorssaint or any other GPL project, and it is NOT covered by the
-GPL-3.0 licence that applies to the rest of this repository (see NOTICE at
-the repository root).
+This folder is part of G's Avengers and, like the rest of the repository,
+is licensed under the GNU General Public License, version 3 or (at your
+option) any later version. See the LICENSE file at the repository root for
+the full text, and NOTICE for how the whole app is put together.
 
-The source code is published so that people can read it and check what it
-does ("source-available"). It is not open source.
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
 
-You MAY:
-  1. Read and review the source code.
-  2. Install and use the official release builds published by GauthamWho
-     (https://github.com/GauthamWho/GsAvengers/releases) on your own devices,
-     for your own personal, non-commercial use.
-  3. Build it, unmodified, on your own computer with the build scripts in
-     this repository (for example INSTALL.cmd / build.cmd on Windows, or
-     build.sh on the Mac), only for that same personal use.
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+more details.
 
-You may NOT, without prior written permission from GauthamWho:
-  1. Copy this source code, in whole or in part, into any other project.
-  2. Modify it or create derivative works based on it.
-  3. Build, rebuild or compile it for distribution, or distribute any build
-     of it other than the unmodified official release.
-  4. Redistribute, sublicense, sell, rent or publish it, in source or binary
-     form.
-  5. Use it, or any part of it, for commercial purposes.
-
-Reporting issues, suggesting features and sending feedback through the
-GitHub repository is welcome and does not require permission.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE
-USE OF THE SOFTWARE.
-
-All rights not expressly granted above are reserved by GauthamWho.
-Permission requests: open a Discussion at
-https://github.com/GauthamWho/GsAvengers/discussions
+SPDX-License-Identifier: GPL-3.0-or-later

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
 // G's Avengers — turns events from the Windows keyboard/mouse into real Mac input
 import AppKit
 import CoreGraphics

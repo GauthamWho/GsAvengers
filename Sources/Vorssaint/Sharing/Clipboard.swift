@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
 // G's Avengers — clipboard sharing (text + images)
 import AppKit
 
@@ -5,22 +7,19 @@ final class Clipboard {
     enum Item { case text(String), png(Data) }
     var onLocalChange: ((Item) -> Void)?
     private var lastCount = NSPasteboard.general.changeCount
-    private var timer: Timer?
+    private var watching = false
     private let maxBytes = 16 << 20
 
-    /// Watches the pasteboard only while a trusted laptop is connected.
-    /// macOS has no pasteboard-changed notification, so it reads the change
-    /// count (one integer, no data) every half second.
+    /// Watches the pasteboard only while a trusted laptop is connected,
+    /// through the app's one shared change-only watch.
     func start() {
-        guard timer == nil else { return }
+        guard !watching else { return }
         lastCount = NSPasteboard.general.changeCount
-        let t = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in self?.poll() }
-        t.tolerance = 0.2
-        RunLoop.main.add(t, forMode: .common)
-        timer = t
+        PasteboardWatch.shared.subscribe("sharing") { [weak self] in self?.poll() }
+        watching = true
     }
 
-    func stop() { timer?.invalidate(); timer = nil }
+    func stop() { PasteboardWatch.shared.unsubscribe("sharing"); watching = false }
 
     private func poll() {
         let pb = NSPasteboard.general

@@ -79,6 +79,8 @@ final class AvengersWindowController: NSObject, NSWindowDelegate {
             self.window?.delegate = nil
             self.window = nil
             self.router = nil
+            // Hand the freed pages back to the system now rather than later.
+            malloc_zone_pressure_relief(nil, 0)
         }
     }
 }
