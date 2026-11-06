@@ -112,9 +112,9 @@ struct GlassView: NSViewRepresentable {
 struct AuroraView: View {
     let colors: [Color]
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30)) { t in
-            let s = t.date.timeIntervalSinceReferenceDate
-            GeometryReader { g in
+        // Still on purpose: a moving blurred backdrop kept the CPU and WindowServer busy.
+        let s = 0.0
+        GeometryReader { g in
                 ZStack {
                     ForEach(Array(colors.enumerated()), id: \.offset) { i, c in
                         let p = Double(i) * 2.1
@@ -126,7 +126,6 @@ struct AuroraView: View {
                     }
                 }
             }
-        }
         .allowsHitTesting(false)
     }
 }

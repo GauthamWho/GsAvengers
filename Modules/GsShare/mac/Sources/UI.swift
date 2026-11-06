@@ -118,7 +118,7 @@ struct StatusPill: View {
         .background(Capsule().fill(L.text.opacity(0.07)))
         .overlay(Capsule().strokeBorder(L.text.opacity(0.08), lineWidth: 1))
         .background(ConnectRipple(color: L.ok, trigger: connected))
-        .onAppear { withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { pulse = true } }
+        .onAppear { pulse = true }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: connected)
     }
 }
@@ -533,7 +533,7 @@ struct ArrangeCard: View {
             .frame(maxWidth: .infinity).frame(height: 280)
             .background(ZStack { RoundedRectangle(cornerRadius: max(L.radius - 6, 8), style: .continuous).fill(L.stage); StageDots() })
             .clipShape(RoundedRectangle(cornerRadius: max(L.radius - 6, 8), style: .continuous))
-            .onAppear { withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) { flow = -18 } }
+            .onAppear { flow = -18 }
             if !state.lastPeerSeen.isEmpty && !state.connected {
                 Text("Seen on the network: \(state.lastPeerSeen)").font(.system(size: 11)).foregroundColor(L.muted)
             }

@@ -70,9 +70,8 @@ struct FrostBackdrop: View {
                 FrostGlass()
             }
             LinearGradient(colors: Frost.background, startPoint: .top, endPoint: .bottom)
-            if snapshot { lights(0) } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 30)) { lights($0.date.timeIntervalSinceReferenceDate) }
-            }
+            // Still on purpose: a moving blurred backdrop kept the CPU and WindowServer busy.
+            lights(0)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -337,7 +336,7 @@ struct FrostStatusPill: View {
         .fixedSize()
         .onAppear {
             guard !snapshot else { return }
-            withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { pulse = true }
+            pulse = true
         }
     }
 }
