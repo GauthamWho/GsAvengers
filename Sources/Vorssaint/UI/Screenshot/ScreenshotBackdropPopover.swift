@@ -37,7 +37,6 @@ enum BackdropPickerAssets {
                      blue: components[2], opacity: 1)
     }
 
-
     static func thumbnail(for url: URL) -> NSImage? {
         let key = url.path as NSString
         if let cached = BackdropPickerAssets.thumbnailCache.object(forKey: key) { return cached }
@@ -53,7 +52,6 @@ enum BackdropPickerAssets {
         BackdropPickerAssets.thumbnailCache.setObject(image, forKey: key)
         return image
     }
-
 
     /// The inline palette, so picking a color never leaves the popover.
     static let palette: [[Double]] = [

@@ -30,9 +30,6 @@ final class DockPreviewService: ObservableObject {
     @Published private(set) var orientation: DockPreviewOrientation = .bottom
     private var isDraggingWindow = false
 
-    private var tap: CFMachPort?
-    private var runLoopSource: CFRunLoopSource?
-    private var settingsTimer: Timer?
     private let dockAutohideHold = DockAutohideHold()
     private var dockFrameRestoration: DockPreviewFrameRestoration?
     private var dockFrameRestorationGeneration = 0
@@ -41,7 +38,6 @@ final class DockPreviewService: ObservableObject {
     private var dockHoldInputSource: CFRunLoopSource?
     private var pendingHover: PendingHover?
     private var pendingHide: DispatchWorkItem?
-    private var lastMoveSampledAt: TimeInterval = 0
     private var pendingMove: DispatchWorkItem?
     private var pendingMovePoint: CGPoint?
     private var pointerEventGeneration = 0
@@ -85,16 +81,10 @@ final class DockPreviewService: ObservableObject {
             endSession()
             // Pinned panels pick up the new scope on their existing refresh timer.
         }
-        let enabled = AppFeature.dockPreview.isAvailable
+        let enabled = AppFeature.dockPreview.isOn
             && UserDefaults.standard.bool(forKey: DefaultsKey.dockPreviewEnabled)
         cachedPreferences = readDockPreferences()
         dockAutohide = cachedPreferences?.autohide ?? false
-
-        if enabled {
-            startSettingsTimer()
-        } else {
-            stopSettingsTimer()
-        }
 
         let availability = DockPreviewSupport.availability(
             enabled: enabled,
@@ -150,7 +140,6 @@ final class DockPreviewService: ObservableObject {
     }
 
     func stop() {
-        stopSettingsTimer()
         stopTap()
         endSession()
         closeAllPinnedPanels()
@@ -358,19 +347,113 @@ final class DockPreviewService: ObservableObject {
         preview(next)
     }
 
-    // MARK: - Event tap
+    // MARK: - Hover detection without a pointer tap
+    //
+    // At rest nothing here sees the pointer move. The Dock itself reports,
+    // through Accessibility, which icon is under the pointer (the selected
+    // child of its list changes on hover), so the hover is learned from the
+    // Dock's own notification. Only while a preview panel is on screen does a
+    // listen-only tap follow the pointer and clicks (to keep the panel open
+    // while the pointer travels to it and to close it on a click elsewhere),
+    // and that tap runs on the input thread, never the main thread.
+
+    private var dockObserver: AXObserver?
+    private var observedDockLists: [AXUIElement] = []
+    private var dockLaunchObserver: NSObjectProtocol?
 
     private func startTap() {
-        guard tap == nil else {
+        guard dockObserver == nil else {
             isRunning = true
             return
         }
+        guard let pid = dockProcessID() else {
+            isRunning = false
+            blockedReason = .dockUnavailable
+            return
+        }
+        var created: AXObserver?
+        let callback: AXObserverCallback = { _, _, _, _ in
+            DispatchQueue.main.async { DockPreviewService.shared.dockSelectionChanged() }
+        }
+        guard AXObserverCreate(pid, callback, &created) == .success, let observer = created else {
+            isRunning = false
+            blockedReason = .missingAccessibility
+            return
+        }
+        let dock = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(dock, DockPreviewSupport.dockHitTimeout)
+        var children: CFTypeRef?
+        AXUIElementCopyAttributeValue(dock, kAXChildrenAttribute as CFString, &children)
+        let lists = (children as? [AXUIElement] ?? []).filter { element in
+            var role: CFTypeRef?
+            AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
+            return (role as? String) == (kAXListRole as String)
+        }
+        for list in lists {
+            AXObserverAddNotification(observer, list, kAXSelectedChildrenChangedNotification as CFString, nil)
+        }
+        CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(observer), .defaultMode)
+        dockObserver = observer
+        observedDockLists = lists
+        // A restarted Dock is a new process: observe the new one.
+        if dockLaunchObserver == nil {
+            dockLaunchObserver = NSWorkspace.shared.notificationCenter.addObserver(
+                forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main
+            ) { [weak self] note in
+                guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                      app.bundleIdentifier == "com.apple.dock", let self else { return }
+                self.dockPIDCache = nil
+                self.stopTap()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in self?.syncWithPreferences() }
+            }
+        }
+        isRunning = true
+    }
 
+    private func stopTap() {
+        stopSpaceObservation()
+        if let dockObserver {
+            for list in observedDockLists {
+                AXObserverRemoveNotification(dockObserver, list, kAXSelectedChildrenChangedNotification as CFString)
+            }
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(dockObserver), .defaultMode)
+        }
+        dockObserver = nil
+        observedDockLists = []
+        stopSessionTap()
+        cancelPendingHover()
+        cancelPendingMove()
+    }
+
+    /// The Dock moved its hover highlight (or dropped it). The pointer's
+    /// position is read once, here, without any tap.
+    fileprivate func dockSelectionChanged() {
+        guard isRunning else { return }
+        // Dock settings (size, side, auto-hide) have no change notification;
+        // they are read again on hover, which is when they matter.
+        let fresh = readDockPreferences()
+        if fresh != cachedPreferences {
+            cachedPreferences = fresh
+            dockAutohide = fresh?.autohide ?? false
+        }
+        guard let location = CGEvent(source: nil)?.location else { return }
+        handleOnMain(type: .mouseMoved, axPoint: location)
+    }
+
+    // MARK: Session tap (only while a preview is on screen)
+
+    private var sessionTap: CFMachPort?
+    private var sessionTapSource: CFRunLoopSource?
+    private let sessionPointLock = NSLock()
+    private var sessionPendingPoint: CGPoint?
+    private var sessionHopQueued = false
+
+    private func startSessionTap() {
+        guard sessionTap == nil else { return }
         let mask = CGEventMask(1 << CGEventType.mouseMoved.rawValue)
             | CGEventMask(1 << CGEventType.leftMouseDown.rawValue)
             | CGEventMask(1 << CGEventType.rightMouseDown.rawValue)
             | CGEventMask(1 << CGEventType.otherMouseDown.rawValue)
-
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .tailAppendEventTap,
@@ -379,110 +462,52 @@ final class DockPreviewService: ObservableObject {
             callback: { _, type, event, userInfo in
                 guard let userInfo else { return Unmanaged.passUnretained(event) }
                 let service = Unmanaged<DockPreviewService>.fromOpaque(userInfo).takeUnretainedValue()
-                return service.handle(type: type, event: event)
+                service.sessionEvent(type: type, point: event.location)
+                return Unmanaged.passUnretained(event)
             },
             userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else {
-            isRunning = false
-            blockedReason = .missingAccessibility
+        ), let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0) else { return }
+        sessionTap = tap
+        sessionTapSource = source
+        PointerTapRunLoop.add(source)
+        CGEvent.tapEnable(tap: tap, enable: true)
+    }
+
+    private func stopSessionTap() {
+        if let sessionTap { CGEvent.tapEnable(tap: sessionTap, enable: false) }
+        if let sessionTapSource { PointerTapRunLoop.remove(sessionTapSource, invalidating: sessionTap) }
+        sessionTap = nil
+        sessionTapSource = nil
+    }
+
+    /// Input thread: clicks go to main at once; moves are coalesced so at
+    /// most one hop to the main thread is in flight.
+    private func sessionEvent(type: CGEventType, point: CGPoint) {
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            DispatchQueue.main.async { [weak self] in
+                if let tap = self?.sessionTap { CGEvent.tapEnable(tap: tap, enable: true) }
+            }
             return
         }
-
-        self.tap = tap
-        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        runLoopSource = source
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
-        isRunning = true
-    }
-
-    private func stopTap() {
-        stopSpaceObservation()
-        if let tap {
-            CGEvent.tapEnable(tap: tap, enable: false)
+        if type != .mouseMoved {
+            DispatchQueue.main.async { [weak self] in self?.handleOnMain(type: type, axPoint: point) }
+            return
         }
-        if let runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+        let schedule = sessionPointLock.withLock { () -> Bool in
+            sessionPendingPoint = point
+            defer { sessionHopQueued = true }
+            return !sessionHopQueued
         }
-        if let tap { CFMachPortInvalidate(tap) }
-        tap = nil
-        runLoopSource = nil
-        cancelPendingHover()
-        cancelPendingMove()
-    }
-
-    private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
-            return Unmanaged.passUnretained(event)
-        }
-
-        let point = event.location
-        // The tap sees every mouse move on the whole screen, and nearly all of
-        // them happen far from the Dock with nothing open — paying a closure
-        // allocation and a main-queue hop for each one keeps the CPU warm all
-        // day. The tap's run-loop source lives on the main run loop, so this
-        // callback already runs on the main thread and may read panel state
-        // and settle those moves synchronously for free.
-        if type == .mouseMoved {
-            if discardFarMouseMove(axPoint: point) {
-                cancelPendingMove()
-                return Unmanaged.passUnretained(event)
-            }
-            guard admitMouseMove(axPoint: point) else {
-                return Unmanaged.passUnretained(event)
-            }
-        } else {
-            cancelPendingMove()
-        }
-        let generation = pointerEventGeneration
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.pointerEventGeneration == generation else { return }
-            self.handleOnMain(type: type, axPoint: point)
-        }
-        return Unmanaged.passUnretained(event)
-    }
-
-    /// The synchronous twin of handleMouseMoved's cheapest path: no session on
-    /// screen, no hover pending and the cursor outside the Dock's edge strip
-    /// means the move only needs its position recorded (the deferred hide and
-    /// switch re-confirmations read these) — everything else falls through to
-    /// the full handler.
-    private func discardFarMouseMove(axPoint: CGPoint) -> Bool {
-        // Nothing checks whether the tap is running: the only caller is the tap
-        // callback, which cannot run unless it is.
-        guard !isVisible, pendingHover == nil else { return false }
-        let point = appKitPoint(fromAX: axPoint)
-        guard !isNearDock(point) else { return false }
-        lastAXMousePoint = axPoint
-        lastAppKitMousePoint = point
-        return true
-    }
-
-    /// Lets one move per display frame reach the AX path and retains the
-    /// newest dropped point, so a cursor that comes to rest still opens the
-    /// intended preview.
-    private func admitMouseMove(axPoint: CGPoint) -> Bool {
-        let now = ProcessInfo.processInfo.systemUptime
-        guard now - lastMoveSampledAt < DockPreviewSupport.mouseMoveSampleInterval else {
-            lastMoveSampledAt = now
-            cancelPendingMove()
-            return true
-        }
-        pendingMovePoint = axPoint
-        guard pendingMove == nil else { return false }
-        let work = DispatchWorkItem { [weak self] in
+        guard schedule else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + DockPreviewSupport.mouseMoveSampleInterval) { [weak self] in
             guard let self else { return }
-            self.pendingMove = nil
-            self.lastMoveSampledAt = ProcessInfo.processInfo.systemUptime
-            guard let point = self.pendingMovePoint else { return }
-            self.pendingMovePoint = nil
-            self.handleOnMain(type: .mouseMoved, axPoint: point)
+            let latest = self.sessionPointLock.withLock { () -> CGPoint? in
+                self.sessionHopQueued = false
+                defer { self.sessionPendingPoint = nil }
+                return self.sessionPendingPoint
+            }
+            if let latest { self.handleOnMain(type: .mouseMoved, axPoint: latest) }
         }
-        pendingMove = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + DockPreviewSupport.mouseMoveSampleInterval,
-                                      execute: work)
-        return false
     }
 
     private func cancelPendingMove() {
@@ -787,6 +812,9 @@ final class DockPreviewService: ObservableObject {
         releaseDockAutohideHold()
         tearDownVisuals()
         isPinned = false
+        // Pinned panels keep their own window; the pointer is only followed
+        // while the hover panel is up.
+        stopSessionTap()
     }
 
     /// Clears all per-app panel state while leaving the panel window available
@@ -953,6 +981,7 @@ final class DockPreviewService: ObservableObject {
         panel.setFrame(frame, display: true, animate: false)
         panel.contentViewController?.view.layoutSubtreeIfNeeded()
         panel.orderFrontRegardless()
+        startSessionTap()
     }
 
     private func resizePanelForCurrentWindows() {
@@ -1133,6 +1162,7 @@ final class DockPreviewService: ObservableObject {
         panel.setFrame(frame, display: true, animate: false)
         panel.contentViewController?.view.layoutSubtreeIfNeeded()
         panel.orderFrontRegardless()
+        startSessionTap()
     }
 
     private func makePinnedPanel(for pinned: DockPreviewPinnedPanel) -> NSPanel {
@@ -1301,32 +1331,6 @@ final class DockPreviewService: ObservableObject {
     }
 
     // MARK: - Dock preferences
-
-    private func startSettingsTimer() {
-        guard settingsTimer == nil else { return }
-        // This only tracks the user editing the Dock itself (position, size,
-        // autohide, magnification) — rare events with no notification API.
-        // Each poll copies the whole com.apple.dock domain, so it runs on a
-        // slow beat and the full (tap/session/pid) resync below only happens
-        // when something actually changed.
-        let timer = Timer(timeInterval: 10, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            let fresh = self.readDockPreferences()
-            // Resync on a real change — or while blocked, so a Dock that was
-            // restarting (or briefly unavailable) still brings the tap back.
-            if fresh != self.cachedPreferences || !self.isRunning {
-                self.syncWithPreferences()
-            }
-        }
-        timer.tolerance = 2.5
-        RunLoop.main.add(timer, forMode: .common)
-        settingsTimer = timer
-    }
-
-    private func stopSettingsTimer() {
-        settingsTimer?.invalidate()
-        settingsTimer = nil
-    }
 
     private func readDockPreferences() -> DockPreviewPreferences? {
         let domain = UserDefaults.standard.persistentDomain(forName: "com.apple.dock")

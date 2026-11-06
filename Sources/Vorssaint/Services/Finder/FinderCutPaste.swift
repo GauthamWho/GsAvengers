@@ -157,7 +157,28 @@ final class FinderCutPaste: ObservableObject {
 
     // MARK: - Event tap
 
+    /// Whether Finder is in front, kept for the tap thread from the
+    /// activation notification (no lookups in the tap).
+    private let frontLock = NSLock()
+    private var frontIsFinder = false
+    private var frontObserver: NSObjectProtocol?
+
+    private func watchFrontApp() {
+        let update: (NSRunningApplication?) -> Void = { [weak self] app in
+            let finder = app?.bundleIdentifier == Self.finderBundleID
+            self?.frontLock.withLock { self?.frontIsFinder = finder }
+        }
+        update(NSWorkspace.shared.frontmostApplication)
+        guard frontObserver == nil else { return }
+        frontObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { note in
+            update(note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)
+        }
+    }
+
     private func installTap() {
+        watchFrontApp()
         let thread = tapLifecycleLock.withLock { () -> Thread? in
             if tapThread != nil {
                 if shouldStopTapThread { pendingTapRestart = true }
@@ -275,7 +296,10 @@ final class FinderCutPaste: ObservableObject {
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
         guard flags.contains(.maskCommand),
               !flags.contains(.maskControl), !flags.contains(.maskAlternate),
-              keyCode == Key.x || keyCode == Key.c || keyCode == Key.v
+              keyCode == Key.x || keyCode == Key.c || keyCode == Key.v,
+              // Only Finder's ⌘X/C/V can be ours; every other app's keys pass
+              // without ever waiting on the main thread.
+              frontLock.withLock({ frontIsFinder })
         else { return Unmanaged.passUnretained(event) }
 
         var verdict: Unmanaged<CGEvent>?

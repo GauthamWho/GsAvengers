@@ -3,49 +3,6 @@
 
 import SwiftUI
 
-/// Shared look & feel: brand colors, card styling and the brand mark.
-enum Theme {
-    /// Near-black background behind the brand mark. Neutral greys into black, no
-    /// colour cast, with just a hint of depth so the badge does not read as flat.
-    static let spaceGradient = LinearGradient(
-        colors: [Color(white: 0.10),
-                 Color(white: 0.04),
-                 Color.black],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
-}
-
-enum PanelMetricColor {
-    static func green(for scheme: ColorScheme) -> Color {
-        scheme == .light ? Color(red: 0.00, green: 0.44, blue: 0.18) : .green
-    }
-
-    static func cyan(for scheme: ColorScheme) -> Color {
-        scheme == .light ? Color(red: 0.00, green: 0.43, blue: 0.54) : .cyan
-    }
-
-    static func mint(for scheme: ColorScheme) -> Color {
-        scheme == .light ? Color(red: 0.00, green: 0.44, blue: 0.40) : .mint
-    }
-
-    static func yellow(for scheme: ColorScheme) -> Color {
-        scheme == .light ? Color(red: 0.56, green: 0.36, blue: 0.00) : .yellow
-    }
-
-    static func red(for scheme: ColorScheme) -> Color {
-        scheme == .light ? Color(red: 0.68, green: 0.08, blue: 0.10) : .red
-    }
-
-    static func orange(for scheme: ColorScheme) -> Color {
-        scheme == .light ? Color(red: 0.68, green: 0.30, blue: 0.00) : .orange
-    }
-
-    static func pink(for scheme: ColorScheme) -> Color {
-        scheme == .light ? Color(red: 0.68, green: 0.06, blue: 0.34) : .pink
-    }
-}
-
 enum PanelSurface {
     /// Whether the menu popover hosts the panel across its whole balloon, so the
     /// panel's own surface can reach the arrow (#1030). Only macOS 26 lays the
@@ -234,37 +191,3 @@ struct BrandMark: View {
     }
 }
 
-struct DiscordMark: View {
-    var width: CGFloat
-
-    private static let mark: NSImage? = {
-        guard let url = Bundle.main.url(forResource: "discord-symbol",
-                                        withExtension: "svg",
-                                        subdirectory: "Images") else { return nil }
-        return NSImage(contentsOf: url)
-    }()
-
-    var body: some View {
-        if let mark = Self.mark {
-            Image(nsImage: mark)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: width)
-        }
-    }
-}
-
-/// Squircle badge with the mark on the space gradient — the app's face in the
-/// About tab and onboarding.
-struct BrandBadge: View {
-    var size: CGFloat
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
-                .fill(Theme.spaceGradient)
-            BrandMark(width: size * 0.8)
-        }
-        .frame(width: size, height: size)
-    }
-}

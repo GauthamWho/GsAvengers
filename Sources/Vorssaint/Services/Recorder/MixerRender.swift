@@ -5,46 +5,6 @@ import Accelerate
 import CoreAudio
 import Darwin
 
-/// The sample representation the mixer can render without conversion. A tap
-/// tied to a device stream inherits that stream's format; it is not always
-/// the interleaved Float32 produced by a stereo mixdown.
-struct MixerTapFormat: Equatable {
-    let sampleRate: Double
-    let channels: Int
-    let flags: AudioFormatFlags
-
-    init?(_ format: AudioStreamBasicDescription, allowNonInterleaved: Bool = false) {
-        let channels = Int(format.mChannelsPerFrame)
-        let planar = format.mFormatFlags & kAudioFormatFlagIsNonInterleaved != 0
-        guard format.mFormatID == kAudioFormatLinearPCM,
-              format.mFormatFlags & kAudioFormatFlagIsFloat != 0,
-              format.mFormatFlags & kAudioFormatFlagIsPacked != 0,
-              allowNonInterleaved || !planar,
-              format.mFormatFlags & kAudioFormatFlagIsBigEndian == kAudioFormatFlagsNativeEndian,
-              format.mBitsPerChannel == 32, channels > 0,
-              UInt64(format.mBytesPerFrame) == UInt64(planar ? 1 : channels) * 4,
-              format.mFramesPerPacket == 1,
-              format.mBytesPerPacket == format.mBytesPerFrame,
-              format.mSampleRate.isFinite, format.mSampleRate > 0 else { return nil }
-        sampleRate = format.mSampleRate
-        self.channels = channels
-        flags = format.mFormatFlags
-    }
-
-    /// A direct tap avoids the system's stereo mixdown attenuation on wide
-    /// interfaces. Restrict it to one complete stream on the app's own output,
-    /// so every captured channel has the same destination and no other stream
-    /// or device is dropped. Other routes retain the stereo mixdown path.
-    static func usesDeviceStream(processDevices: [[AudioObjectID]], outputDevice: AudioObjectID,
-                                 streamCount: Int, startingChannel: UInt32,
-                                 format: MixerTapFormat?) -> Bool {
-        guard outputDevice != 0, streamCount == 1, startingChannel == 1,
-              let format, format.channels > 2 else { return false }
-        let devices = Set(processDevices.flatMap { $0 })
-        return devices == [outputDevice]
-    }
-}
-
 /// Puts a tapped app's audio onto whatever shape the output device asks for.
 ///
 /// The tap hands over interleaved Float32, validated when it is created. The

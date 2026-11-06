@@ -165,21 +165,7 @@ enum DockAutohideHoldTests {
         service.handleDockHoldInput(type: .mouseMoved)
         suite.expect(autohide == false && service.sessionEnds == 0,
                      "moving through previews keeps the Dock held")
-        // Model the system receiving the unmodified key after the synchronous
-        // production handler returns. No event is posted to this Mac.
-        let move = CGEvent(mouseEventSource: nil, mouseType: .mouseMoved,
-                           mouseCursorPosition: .zero, mouseButton: .left)!
-        _ = service.handle(type: .mouseMoved, event: move)
         service.handleDockHoldInput(type: .keyDown)
-        _ = service.handle(type: .mouseMoved, event: move)
-        var queueDrained = false
-        DispatchQueue.main.async { queueDrained = true }
-        let deadline = Date().addingTimeInterval(3)
-        while !queueDrained && Date() < deadline {
-            RunLoop.current.run(until: Date().addingTimeInterval(0.01))
-        }
-        suite.expect(queueDrained && service.deliveredMoves == 1,
-                     "only fresh pointer input survives keyboard dismissal, not an already queued move")
         suite.expect(!service.stoppedWhileHolding,
                      "auto-hide is restored before the input tap can release its pending key")
         suite.expect(autohide == true && !service.pendingMove

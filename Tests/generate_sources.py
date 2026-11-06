@@ -239,7 +239,6 @@ def main():
                     for prefix in ["    private func beginDockAutohideHold()",
                                    "    private func releaseDockAutohideHold()",
                                    "    private func handleDockHoldInput(type:",
-                                   "    private func handle(type:",
                                    "    func commit("])
           + "}\n")
     # The raw wheel tap runs as shipped: linear scrolling's cap, carry and

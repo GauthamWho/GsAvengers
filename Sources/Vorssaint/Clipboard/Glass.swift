@@ -38,27 +38,6 @@ extension View {
     }
 }
 
-/// Groups glass shapes so they blend and morph into each other on macOS 26.
-struct GlassGroup<Content: View>: View {
-    var spacing: CGFloat = 8
-    @ViewBuilder var content: Content
-    var body: some View {
-        if #available(macOS 26.0, *) { GlassEffectContainer(spacing: spacing) { content } } else { content }
-    }
-}
-
-/// System window material for the Add key window.
-struct WindowMaterial: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSVisualEffectView {
-        let v = NSVisualEffectView()
-        v.material = .popover
-        v.blendingMode = .behindWindow
-        v.state = .active
-        return v
-    }
-    func updateNSView(_ v: NSVisualEffectView, context: Context) {}
-}
-
 enum Motion {
     /// Confident arrival: fast start, soft landing. No bounce.
     static let arrive = Animation.spring(response: 0.42, dampingFraction: 0.88)

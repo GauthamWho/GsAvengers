@@ -4,10 +4,7 @@
 import Foundation
 
 struct SwitcherAppRulesStrings {
-    let listTitle: String
     let addButton: String
-    let removeButton: String
-    let behaviorLabel: String
     let showWithoutWindows: String
     let windowsOnly: String
     let hidden: String
@@ -38,10 +35,7 @@ extension FeatureStrings {
 
 extension SwitcherAppRulesStrings {
     static let enUS = SwitcherAppRulesStrings(
-        listTitle: "Rules by app",
         addButton: "Add an app…",
-        removeButton: "Remove",
-        behaviorLabel: "Switcher behavior",
         showWithoutWindows: "Show without windows",
         windowsOnly: "Windows only",
         hidden: "Never show",
@@ -49,10 +43,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let ptBR = SwitcherAppRulesStrings(
-        listTitle: "Regras por app",
         addButton: "Adicionar app…",
-        removeButton: "Remover",
-        behaviorLabel: "Comportamento no alternador",
         showWithoutWindows: "Mostrar sem janelas",
         windowsOnly: "Só com janelas",
         hidden: "Nunca mostrar",
@@ -60,10 +51,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let tr = SwitcherAppRulesStrings(
-        listTitle: "Uygulamaya göre kurallar",
         addButton: "Uygulama ekle…",
-        removeButton: "Kaldır",
-        behaviorLabel: "Değiştirici davranışı",
         showWithoutWindows: "Pencere olmadan göster",
         windowsOnly: "Yalnızca pencereler",
         hidden: "Asla gösterme",
@@ -71,10 +59,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let ru = SwitcherAppRulesStrings(
-        listTitle: "Правила для приложений",
         addButton: "Добавить приложение…",
-        removeButton: "Удалить",
-        behaviorLabel: "Поведение в переключателе",
         showWithoutWindows: "Показывать без окон",
         windowsOnly: "Только с окнами",
         hidden: "Никогда не показывать",
@@ -82,10 +67,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let es = SwitcherAppRulesStrings(
-        listTitle: "Reglas por app",
         addButton: "Añadir app…",
-        removeButton: "Quitar",
-        behaviorLabel: "Comportamiento en el selector",
         showWithoutWindows: "Mostrar sin ventanas",
         windowsOnly: "Solo con ventanas",
         hidden: "No mostrar nunca",
@@ -93,10 +75,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let sk = SwitcherAppRulesStrings(
-        listTitle: "Pravidlá podľa aplikácie",
         addButton: "Pridať aplikáciu…",
-        removeButton: "Odstrániť",
-        behaviorLabel: "Správanie prepínača",
         showWithoutWindows: "Zobraziť aj bez okien",
         windowsOnly: "Len s oknami",
         hidden: "Nikdy nezobrazovať",
@@ -104,10 +83,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let de = SwitcherAppRulesStrings(
-        listTitle: "Regeln pro App",
         addButton: "App hinzufügen…",
-        removeButton: "Entfernen",
-        behaviorLabel: "Verhalten im Umschalter",
         showWithoutWindows: "Ohne Fenster anzeigen",
         windowsOnly: "Nur mit Fenstern",
         hidden: "Nie anzeigen",
@@ -115,10 +91,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let fr = SwitcherAppRulesStrings(
-        listTitle: "Règles par app",
         addButton: "Ajouter une app…",
-        removeButton: "Retirer",
-        behaviorLabel: "Comportement dans le sélecteur",
         showWithoutWindows: "Afficher sans fenêtre",
         windowsOnly: "Avec fenêtres uniquement",
         hidden: "Ne jamais afficher",
@@ -126,10 +99,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let it = SwitcherAppRulesStrings(
-        listTitle: "Regole per app",
         addButton: "Aggiungi app…",
-        removeButton: "Rimuovi",
-        behaviorLabel: "Comportamento nel selettore",
         showWithoutWindows: "Mostra senza finestre",
         windowsOnly: "Solo con finestre",
         hidden: "Non mostrare mai",
@@ -137,10 +107,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let ja = SwitcherAppRulesStrings(
-        listTitle: "Appごとのルール",
         addButton: "Appを追加…",
-        removeButton: "削除",
-        behaviorLabel: "スイッチャーでの表示",
         showWithoutWindows: "ウインドウなしでも表示",
         windowsOnly: "ウインドウがある時のみ",
         hidden: "常に非表示",
@@ -148,10 +115,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let ko = SwitcherAppRulesStrings(
-        listTitle: "앱별 규칙",
         addButton: "앱 추가…",
-        removeButton: "제거",
-        behaviorLabel: "전환기 표시 방식",
         showWithoutWindows: "창 없이도 표시",
         windowsOnly: "창이 있을 때만",
         hidden: "항상 숨기기",
@@ -159,10 +123,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let zhHans = SwitcherAppRulesStrings(
-        listTitle: "按 App 设置规则",
         addButton: "添加 App…",
-        removeButton: "移除",
-        behaviorLabel: "切换器显示方式",
         showWithoutWindows: "无窗口时也显示",
         windowsOnly: "仅有窗口时显示",
         hidden: "始终不显示",
@@ -170,10 +131,7 @@ extension SwitcherAppRulesStrings {
     )
 
     static let zhTW = SwitcherAppRulesStrings(
-        listTitle: "各 App 規則",
         addButton: "加入 App…",
-        removeButton: "移除",
-        behaviorLabel: "切換器顯示方式",
         showWithoutWindows: "沒有視窗時也顯示",
         windowsOnly: "僅有視窗時顯示",
         hidden: "一律不顯示",
@@ -181,20 +139,14 @@ extension SwitcherAppRulesStrings {
     )
 
     static let zhHK = SwitcherAppRulesStrings(
-        listTitle: "各 App 規則",
         addButton: "加入 App…",
-        removeButton: "移除",
-        behaviorLabel: "切換器顯示方式",
         showWithoutWindows: "沒有視窗時也顯示",
         windowsOnly: "僅有視窗時顯示",
         hidden: "一律不顯示",
         caption: "選擇每個 App 的顯示方式。沒有規則的 App 使用上方選項。"
     )
     static let uk = SwitcherAppRulesStrings(
-        listTitle: "Правила за програмами",
         addButton: "Додати програму…",
-        removeButton: "Видалити",
-        behaviorLabel: "Поведінка перемикача",
         showWithoutWindows: "Показувати без вікон",
         windowsOnly: "Лише вікна",
         hidden: "Ніколи не показувати",

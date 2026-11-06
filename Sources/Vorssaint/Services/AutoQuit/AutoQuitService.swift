@@ -652,7 +652,19 @@ final class AutoQuitService: ObservableObject {
             callback: { _, type, event, userInfo in
                 guard let userInfo else { return Unmanaged.passUnretained(event) }
                 let service = Unmanaged<AutoQuitService>.fromOpaque(userInfo).takeUnretainedValue()
-                return service.handleCloseRequestEvent(type: type, event: event)
+                // Served on the input thread: the hit tests run on main, after
+                // the event has already gone on its way.
+                if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                    DispatchQueue.main.async {
+                        if let tap = service.closeRequestTap { CGEvent.tapEnable(tap: tap, enable: true) }
+                    }
+                    return Unmanaged.passUnretained(event)
+                }
+                guard type == .leftMouseDown
+                    || event.flags.contains(.maskCommand) && !event.flags.contains(.maskControl),
+                      let copy = event.copy() else { return Unmanaged.passUnretained(event) }
+                DispatchQueue.main.async { _ = service.handleCloseRequestEvent(type: type, event: copy) }
+                return Unmanaged.passUnretained(event)
             },
             userInfo: Unmanaged.passUnretained(self).toOpaque()
         ) else { return }
@@ -660,7 +672,7 @@ final class AutoQuitService: ObservableObject {
         closeRequestTap = tap
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         closeRequestRunLoopSource = source
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        if let source { PointerTapRunLoop.add(source) }
         CGEvent.tapEnable(tap: tap, enable: true)
     }
 
@@ -669,9 +681,8 @@ final class AutoQuitService: ObservableObject {
             CGEvent.tapEnable(tap: closeRequestTap, enable: false)
         }
         if let closeRequestRunLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), closeRequestRunLoopSource, .commonModes)
+            PointerTapRunLoop.remove(closeRequestRunLoopSource, invalidating: closeRequestTap)
         }
-        if let closeRequestTap { CFMachPortInvalidate(closeRequestTap) }
         closeRequestTap = nil
         closeRequestRunLoopSource = nil
     }
@@ -867,7 +878,6 @@ final class AutoQuitService: ObservableObject {
         if let element { AXUIElementSetMessagingTimeout(element, 0.15) }
         return element
     }
-
 
     /// An application element answers a role query by switching a Chromium app's
     /// renderers into full accessibility mode for the rest of the process's life

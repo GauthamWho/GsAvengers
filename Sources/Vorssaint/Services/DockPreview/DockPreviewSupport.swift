@@ -116,7 +116,6 @@ struct HoverCorridor: Equatable {
     }
 }
 
-
 enum DockPreviewWindowOrder: Equatable {
     case lastUse
     case creation
@@ -150,7 +149,6 @@ enum DockPreviewSupport {
             }
         }
     }
-
 
     static func performCloseAction(quitAppOnClose: Bool,
                                    requestQuit: () -> Bool,

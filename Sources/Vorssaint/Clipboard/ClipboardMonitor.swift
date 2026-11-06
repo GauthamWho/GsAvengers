@@ -97,7 +97,6 @@ final class ClipboardMonitor {
             return text
         }
 
-
         if let rtf = pasteboard.data(forType: .rtf),
            let attributed = try? NSAttributedString(
                 data: rtf,

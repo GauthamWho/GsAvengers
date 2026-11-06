@@ -244,7 +244,6 @@ enum RecorderSupport {
         featureIsAvailable && requestGeneration == currentGeneration
     }
 
-
     // MARK: - What is being recorded
 
     static func exceptedOwnWindowIDs(ownWindowIDs: Set<CGWindowID>,

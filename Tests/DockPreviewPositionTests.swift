@@ -52,6 +52,8 @@ enum DockPreviewPositionTests {
         var visibilityWatchRequests = 0
         var revealedDockHit: DockHit?
         func ensurePanel() -> Panel { panel! }
+        var sessionTapStarts = 0
+        func startSessionTap() { sessionTapStarts += 1 }
         func visibleFrameForScreen(containing rect: CGRect) -> CGRect { screenVisibleFrame }
         func appKitPoint(fromAX point: CGPoint) -> CGPoint { point }
         func cancelPendingHide() { pendingHide = false }

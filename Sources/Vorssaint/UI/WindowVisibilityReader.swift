@@ -4,20 +4,6 @@
 import AppKit
 import SwiftUI
 
-/// A retained SwiftUI hierarchy does not disappear when its NSWindow closes.
-/// Report visibility asynchronously so clients can suspend live previews
-/// without changing SwiftUI state during a layout pass.
-struct WindowVisibilityReader: NSViewRepresentable {
-    let onChange: (Bool) -> Void
-
-    func makeNSView(context: Context) -> WindowVisibilityView { WindowVisibilityView() }
-    func updateNSView(_ view: WindowVisibilityView, context: Context) {
-        view.onChange = onChange
-        view.reportVisibility()
-    }
-    static func dismantleNSView(_ view: WindowVisibilityView, coordinator: ()) { view.stop() }
-}
-
 final class WindowVisibilityView: NSView {
     var onChange: ((Bool) -> Void)?
     private var observer: NSObjectProtocol?

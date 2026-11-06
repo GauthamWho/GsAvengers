@@ -251,9 +251,6 @@ if (( TEST )); then
         Sources/Vorssaint/Core/MenuBarAppearanceStrings.swift
         Sources/Vorssaint/Core/AppAppearance.swift
         Sources/Vorssaint/Core/AppearanceStrings.swift
-        Sources/Vorssaint/Core/GeneralSettingsStrings.swift
-        Sources/Vorssaint/Core/SettingsPageStrings.swift
-        Sources/Vorssaint/Core/KeepAwakeStrings.swift
         Sources/Vorssaint/Services/Recorder/RecorderSupport.swift
         Sources/Vorssaint/Services/Recorder/RecorderSampleTiming.swift
         Sources/Vorssaint/Services/Recorder/RecorderWriter.swift
@@ -293,11 +290,8 @@ if (( TEST )); then
         Sources/Vorssaint/Services/GeneralPasteboardAccess.swift
         Sources/Vorssaint/Services/DockPreview/DockPreviewSupport.swift
         Sources/Vorssaint/Services/DockPreview/DockAutohideHold.swift
-        Sources/Vorssaint/UI/NonModalAlert.swift
-        Sources/Vorssaint/Core/ColorValue.swift
         Sources/Vorssaint/Services/AutoQuit/AutoQuitSupport.swift
         Sources/Vorssaint/Core/AutoQuitDockAppsStrings.swift
-        Sources/Vorssaint/Services/InstalledApps.swift
         Sources/Vorssaint/Services/LaunchAtLoginSupport.swift
         Sources/Vorssaint/Services/Finder/CutPasteProgressSupport.swift
         Sources/Vorssaint/Services/Finder/CutPastePrivilegeSupport.swift
@@ -305,7 +299,6 @@ if (( TEST )); then
         Sources/Vorssaint/Services/WindowServerSupport.swift
         Sources/Vorssaint/Core/WindowLayoutIgnoredAppsStrings.swift
         Sources/Vorssaint/Services/WindowLayout/WindowLayoutIgnoredApps.swift
-        Sources/Vorssaint/Core/WindowPreviewExclusionStrings.swift
         Sources/Vorssaint/Core/SwitcherAppRulesStrings.swift
         Sources/Vorssaint/Services/QuickTools/QuickToolsSupport.swift
         Sources/Vorssaint/Services/QuickTools/ScreenshotCapturePolicy.swift
@@ -316,7 +309,6 @@ if (( TEST )); then
         Sources/Vorssaint/Services/QuickTools/RecentCaptureStore.swift
         Sources/Vorssaint/Services/QuickTools/ScreenshotSharingSupport.swift
         Sources/Vorssaint/Services/QuickTools/WindowActivationPolicy.swift
-        Sources/Vorssaint/Core/InputSourceSelection.swift
         Sources/Vorssaint/Services/SessionActivity.swift
         Sources/Vorssaint/Services/SessionActivitySupport.swift
         Sources/Vorssaint/Services/EventTimestamp.swift
@@ -331,13 +323,11 @@ if (( TEST )); then
         Sources/Vorssaint/Services/KeepAwakeAutomationSupport.swift
         Sources/Vorssaint/Services/SudoersSupport.swift
         Sources/Vorssaint/Services/BoundedProcessRunner.swift
-        Sources/Vorssaint/Services/DetachedProcess.swift
         Sources/Vorssaint/Services/ShellSupport.swift
         Sources/Vorssaint/Services/WindowLayout/WindowLayoutSupport.swift
         Sources/Vorssaint/Services/WindowLayout/WindowStageManagerSupport.swift
         Sources/Vorssaint/Core/WindowStageManagerStrings.swift
         Sources/Vorssaint/Core/WindowDirectionalStrings.swift
-        Sources/Vorssaint/Core/HelperAppStrings.swift
         Sources/Vorssaint/Core/AvengersStrings.swift
         Sources/Vorssaint/Services/Display/LidDimmingSupport.swift
         Sources/Vorssaint/Core/SecureInputSupport.swift

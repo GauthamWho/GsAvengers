@@ -150,7 +150,6 @@ enum WindowServerSupport {
         return nil
     }
 
-
     /// The traffic light a click landed on, if any. `CGRect.contains` decides
     /// what the point is over, so the far edge belongs to the window next to
     /// this one rather than to both. Once a window does contain the point the
