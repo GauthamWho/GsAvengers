@@ -110,6 +110,9 @@ struct AvengersPageView: View {
                 }
                 .buttonStyle(.plain)
                 .help(home.options)
+            } else {
+                // Same width as the chevron, so every switch lines up.
+                Color.clear.frame(width: 22, height: 22)
             }
         }
     }
