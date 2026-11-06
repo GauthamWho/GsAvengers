@@ -38,4 +38,18 @@ Five checks before the first push. Fixed items are in the 1.0.0 code.
 - GitHub Actions: CI is manual-only (macOS runners are costly on a private repo); actions are pinned to commit SHAs. The upstream release workflow (signing secrets) was removed.
 
 ## 5. GitHub repository
-See the repository settings section in the final report / SECURITY.md: private repo, secret scanning and push protection, Dependabot alerts, private vulnerability reporting, main protected from force-push and deletion where the plan allows, Issues and Discussions on.
+- Created **private**. Issues and Discussions on; wiki off; 10 topics.
+- **On:** Dependabot alerts and Dependabot security updates.
+- **Not available on a free private repo** (GitHub answered "not available" / "upgrade to Pro or make public"): secret scanning, push protection, private vulnerability reporting, branch protection and rulesets. All are free once the repo is public. After making it public, run:
+
+```sh
+R=GauthamWho/GsAvengers
+gh api -X PATCH repos/$R -f 'security_and_analysis[secret_scanning][status]=enabled' \
+  -f 'security_and_analysis[secret_scanning_push_protection][status]=enabled'
+gh api -X PUT repos/$R/private-vulnerability-reporting
+gh api -X POST repos/$R/rulesets --input - <<'JSON'
+{"name":"Protect main","target":"branch","enforcement":"active",
+ "conditions":{"ref_name":{"include":["~DEFAULT_BRANCH"],"exclude":[]}},
+ "rules":[{"type":"deletion"},{"type":"non_fast_forward"}]}
+JSON
+```

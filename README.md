@@ -85,7 +85,7 @@ Put your Windows laptop next to your Mac. Move the mouse off the edge of the Win
 1. Download **`GsAvengers-mac-1.0.0.dmg`** from the [latest release](https://github.com/GauthamWho/GsAvengers/releases/latest).
 2. Open it and drag **G's Avengers** onto **Applications**.
 3. The first time, **right-click the app → Open → Open**.
-   The app is signed with an Apple Development certificate but **not notarized** by Apple, so macOS asks once. If it still refuses, open **System Settings → Privacy & Security** and click **Open Anyway**.
+   The app is code-signed with the project's own certificate but **not notarized** by Apple (no paid Apple Developer ID yet), so macOS warns once. On newer macOS, if there is no Open button: try to open it once, then go to **System Settings → Privacy & Security** and click **Open Anyway**.
 4. Click the **GsA** icon in the menu bar. Grant **Accessibility** when asked: it is needed to type and move the pointer for the Windows keyboard, and for the window tools.
 
 ## Install on Windows
