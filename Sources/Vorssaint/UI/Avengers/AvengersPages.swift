@@ -4,35 +4,30 @@
 import AppKit
 import SwiftUI
 
-/// One page of the window. Every switch here is bound to the real thing:
-/// this app's features through AvengersModel, sharing and clipboard through
-/// HelperBridge (the helpers' own state, confirmed by their reply).
+/// One page of the window. Every switch is bound to the real preference
+/// through AvengersModel; sharing and the clipboard run in this process.
 struct AvengersPageView: View {
     let page: AvengersPage
     @ObservedObject var router: AvengersRouter
+    @ObservedObject var model: AvengersModel
     @ObservedObject private var l10n = L10n.shared
-    @ObservedObject private var model = AvengersModel.shared
-    @ObservedObject private var bridge = HelperBridge.shared
     @State private var launchAtLogin = false
 
     private var text: AvengersStrings { FeatureStrings.avengers(l10n.language) }
     private var setup: GsMacSetupStrings { FeatureStrings.gsMacSetup(l10n.language) }
+    private var home: HomeStrings { FeatureStrings.home(l10n.language) }
     private var ring: QuickRingStrings { FeatureStrings.quickRing(l10n.language) }
-    private var helper: HelperAppStrings { FeatureStrings.helperApps(l10n.language) }
-    private var share: HelperWire.ShareState? { bridge.sharing }
+    private var share: SharingSnapshot { model.sharing }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             switch page {
-            case .home: home
-            case .sharing: sharing
-            case .keyboard: keyboard
-            case .clipboard: clipboard
-            case .quickRing: quickRing
-            case .windowsApps: windowsApps
-            case .capture: capture
-            case .lidClosed: lidClosed
-            case .more: more
+            case .home: homePage
+            case .sharing: sharingPage
+            case .keyboard: keyboardPage
+            case .clipboard: clipboardPage
+            case .capture: capturePage
+            case .keepAwake: keepAwakePage
             }
         }
     }
@@ -48,10 +43,6 @@ struct AvengersPageView: View {
         .padding(.bottom, 6)
     }
 
-    private func row(_ title: String, _ item: AvengersSwitch, detail: String? = nil, icon: String? = nil) -> some View {
-        FrostToggleRow(title: title, detail: detail, icon: icon, isOn: model.binding(item))
-    }
-
     private var greeting: String {
         // Offscreen snapshots (README pictures) never show the real user's name.
         let first = AvengersDemo.names ? "Alex"
@@ -61,32 +52,83 @@ struct AvengersPageView: View {
         return String(format: format, first)
     }
 
+    /// The name each feature has on the Home page.
+    func title(_ feature: AppFeature) -> String {
+        switch feature {
+        case .switcher: return setup.switcher
+        case .autoQuit: return setup.closeQuits
+        case .windowLayout: return setup.snapping
+        case .dockPreview: return home.dockPreview
+        case .finderCutPaste: return setup.cutPaste
+        case .sharing: return home.sharing
+        case .clipboardHistory: return setup.clipboard
+        case .urlCleaner: return home.urlCleaner
+        case .screenshot: return setup.screenshot
+        case .screenRecorder: return setup.recorder
+        case .screenOCR: return home.screenOCR
+        case .quickRing: return "\(setup.quickRing) (⌃⌃)"
+        case .keepAwake: return home.keepAwake
+        }
+    }
+
+    private func groupTitle(_ group: FeatureGroup) -> String {
+        switch group {
+        case .windowsHabits: return home.groupWindows
+        case .sharingClipboard: return home.groupSharing
+        case .capture: return home.groupCapture
+        case .power: return home.groupPower
+        }
+    }
+
+    private func groupIcon(_ group: FeatureGroup) -> String {
+        switch group {
+        case .windowsHabits: return "macwindow.on.rectangle"
+        case .sharingClipboard: return "pc"
+        case .capture: return "camera.viewfinder"
+        case .power: return "bolt"
+        }
+    }
+
+    /// The page with a feature's few settings, when it has any.
+    private func optionsPage(_ feature: AppFeature) -> AvengersPage? {
+        switch feature {
+        case .sharing: return .sharing
+        case .clipboardHistory: return .clipboard
+        case .screenshot, .screenRecorder, .screenOCR, .switcher: return .capture
+        case .keepAwake: return .keepAwake
+        default: return nil
+        }
+    }
+
+    private func featureRow(_ feature: AppFeature) -> some View {
+        HStack(spacing: 6) {
+            FrostToggleRow(title: title(feature), icon: feature.symbolName, isOn: model.binding(feature))
+            if let page = optionsPage(feature) {
+                Button { withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) { router.page = page } } label: {
+                    Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundColor(Frost.muted)
+                        .frame(width: 22, height: 22).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(home.options)
+            }
+        }
+    }
+
     private func sideWord(_ side: Int) -> String {
         [text.sideLeft, text.sideRight, text.sideTop, text.sideBottom][min(max(side, 0), 3)]
     }
 
     private var laptopLine: String {
-        guard let share else { return text.noLaptop }
         if !share.peer.isEmpty { return "\(share.peer) · \(sideWord(share.side))" }
         if !share.lastSeen.isEmpty { return String(format: text.seenFormat, share.lastSeen) }
         return text.noLaptop
     }
 
     private var pill: FrostStatusPill {
-        guard bridge.sharingRunning, let share else { return FrostStatusPill(text: text.pillOff, good: false, quiet: true) }
-        if share.paused { return FrostStatusPill(text: text.pillPaused, good: false, quiet: true) }
+        guard share.running else { return FrostStatusPill(text: text.pillOff, good: false, quiet: true) }
         if share.pairCode != nil { return FrostStatusPill(text: text.pillPairing, good: false) }
         if share.connected { return FrostStatusPill(text: share.active ? text.pillOnMac : text.pillConnected, good: true) }
         return FrostStatusPill(text: text.pillSearching, good: false)
-    }
-
-    private var shareOn: Binding<Bool> {
-        Binding(get: { !(bridge.sharing?.paused ?? true) }, set: { bridge.setSharingPaused(!$0) })
-    }
-
-    private func rule(_ id: String) -> Binding<Bool> {
-        Binding(get: { bridge.sharing?.rules.first { $0.id == id }?.on ?? false },
-                set: { bridge.setRule(id, $0) })
     }
 
     private var laptopCard: some View {
@@ -98,316 +140,58 @@ struct AvengersPageView: View {
             }
             .padding(.vertical, 3)
             FrostHairline()
-            FrostToggleRow(title: text.shareKeyboardMouse, isOn: shareOn).disabled(share == nil)
+            FrostToggleRow(title: text.shareKeyboardMouse, isOn: model.binding(.sharing))
         }
     }
 
-    // MARK: - Home
+    // MARK: - Home: all thirteen switches
 
-    private var home: some View {
+    private var homePage: some View {
         Group {
             header(greeting, text.homeSubtitle)
-            laptopCard
-            HStack(alignment: .top, spacing: 12) {
-                FrostCard(title: text.quickSwitches) {
-                    row("\(ring.title) (⌃⌃)", .quickRing)
-                    FrostHairline()
-                    row("\(helper.clipboardTitle) (\(bridge.clipboard?.shortcut ?? "fn V"))", .clipboardHelper)
-                    FrostHairline()
-                    row(setup.lidClosed, .lidClosed)
-                }
-                FrostCard(title: text.windowsHabits) {
-                    FrostToggleRow(title: text.ctrlIsCommand, isOn: rule("ctrl.cmd")).disabled(share == nil)
-                    FrostHairline()
-                    FrostToggleRow(title: text.winIsFn, isOn: rule("win.fn")).disabled(share == nil)
-                    FrostHairline()
-                    row(text.xCloses, .closeQuits)
+            ForEach(FeatureGroup.allCases, id: \.self) { group in
+                FrostCard(title: groupTitle(group), icon: groupIcon(group)) {
+                    let features = AppFeature.features(in: group)
+                    ForEach(features, id: \.self) { feature in
+                        if feature != features.first { FrostHairline() }
+                        featureRow(feature)
+                    }
                 }
             }
+            appCard
         }
     }
 
-    // MARK: - Windows sharing
-
-    private var sharing: some View {
-        Group {
-            header(text.sharing, text.sharingSubtitle)
-            if let share, !share.trusted {
-                FrostCard(title: helper.sharingTitle, icon: "hand.raised.fill") {
-                    Text(text.accessNeeded).font(.system(size: 13)).foregroundColor(Frost.text)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Button(helper.openSharingWindow) { bridge.openSharingWindow() }
-                        .buttonStyle(FrostButtonStyle(compact: true))
-                }
-            }
-            laptopCard
-            pairingCard
-            FrostCard(title: text.layoutLabel, icon: "rectangle.on.rectangle") {
-                Text(share?.peerId.isEmpty == false ? text.layoutHint : text.layoutEmpty)
-                    .font(.system(size: 12.5)).foregroundColor(Frost.muted)
-                AvengersArrangeStage(text: text)
-            }
-            FrostCard(title: text.pointerLabel, icon: "cursorarrow.motionlines") {
-                FrostSliderRow(title: text.pointerSpeed, value: Binding(
-                    get: { share?.mouseSpeed ?? 1 },
-                    set: { bridge.setShare(\.mouseSpeed, $0, .mouseSpeed($0), coalesce: true) }), range: 0.4...2.5)
-                FrostSliderRow(title: text.scrollSpeed, value: Binding(
-                    get: { share?.scrollSpeed ?? 1 },
-                    set: { bridge.setShare(\.scrollSpeed, $0, .scrollSpeed($0), coalesce: true) }), range: 0.2...3)
-                FrostHairline()
-                FrostToggleRow(title: text.reverseScroll, isOn: Binding(
-                    get: { share?.reverseScroll ?? false },
-                    set: { bridge.setShare(\.reverseScroll, $0, .reverseScroll($0)) }))
-                FrostHairline()
-                FrostToggleRow(title: text.shareClipboard, isOn: Binding(
-                    get: { share?.shareClipboard ?? false },
-                    set: { bridge.setShare(\.shareClipboard, $0, .shareClipboard($0)) }))
-            }
-            .disabled(share == nil)
-            Text(text.homeKeyHint).font(.system(size: 11)).foregroundColor(Frost.muted).padding(.horizontal, 4)
-        }
-    }
-
-    @ViewBuilder private var pairingCard: some View {
-        if let share {
-            FrostCard(title: text.pairingLabel, icon: "link") {
-                if let code = share.pairCode {
-                    Text(text.pairCheck).font(.system(size: 13)).foregroundColor(Frost.text)
-                    HStack(spacing: 7) {
-                        ForEach(Array(code.enumerated()), id: \.offset) { index, digit in
-                            FrostPairDigit(digit: digit).padding(.leading, index == 3 ? 8 : 0)
-                        }
-                    }
-                    if share.pairConfirmed {
-                        HStack(spacing: 8) {
-                            ProgressView().controlSize(.small)
-                            Text(text.pairWaiting).font(.system(size: 12)).foregroundColor(Frost.muted)
-                        }
-                    } else {
-                        Button(text.pairButton) { bridge.send(.confirmPair) }
-                            .buttonStyle(FrostButtonStyle(compact: true))
-                    }
-                } else if share.paired, !share.peer.isEmpty {
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.seal.fill").foregroundColor(Frost.ok)
-                        Text(String(format: text.pairedWithFormat, share.peer)).font(.system(size: 13)).foregroundColor(Frost.text)
-                    }
-                } else {
-                    FrostStep(number: 1, text: text.notPaired, done: share.paired)
-                }
-            }
-        }
-    }
-
-    // MARK: - Keyboard
-
-    private var keyboard: some View {
-        Group {
-            header(text.keyboard, text.keyboardSubtitle)
-            let rules = share?.rules ?? []
-            let groups = rules.reduce(into: [String]()) { if !$0.contains($1.group) { $0.append($1.group) } }
-            FrostCard(title: helper.keyboardRules.replacingOccurrences(of: "…", with: ""), icon: "keyboard") {
-                if rules.isEmpty {
-                    Text(text.pillOff).font(.system(size: 13)).foregroundColor(Frost.muted)
-                }
-                ForEach(groups, id: \.self) { group in
-                    AvengersKeyGroup(group: group, rules: rules.filter { $0.group == group },
-                                     startOpen: group == groups.first, countFormat: text.countFormat)
-                }
-            }
-            HStack(spacing: 10) {
-                Text(text.ownSwaps).font(.system(size: 12)).foregroundColor(Frost.muted)
+    private var appCard: some View {
+        FrostCard(title: text.appLabel, icon: "gearshape") {
+            HStack {
+                Text(l10n.s.languageLabel).font(.system(size: 13)).foregroundColor(Frost.text)
                 Spacer(minLength: 8)
-                Button(helper.openSharingWindow) { bridge.openSharingWindow() }
+                Menu(l10n.language.displayName) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Button(language.displayName) { l10n.language = language }
+                    }
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+            }
+            .padding(.vertical, 3)
+            FrostHairline()
+            FrostToggleRow(title: l10n.s.launchAtLogin, isOn: Binding(get: { launchAtLogin }, set: { on in
+                launchAtLogin = on
+                LaunchAtLogin.setEnabled(on) { registration, _ in launchAtLogin = registration == .enabled }
+            }))
+            FrostHairline()
+            HStack(spacing: 8) {
+                Button(l10n.s.menuAbout) { showAbout() }
+                    .buttonStyle(FrostButtonStyle(prominent: false, compact: true))
+                Spacer(minLength: 0)
+                Button(l10n.s.menuQuit) { NSApp.terminate(nil) }
                     .buttonStyle(FrostButtonStyle(prominent: false, compact: true))
             }
-            .padding(.horizontal, 4)
+            .padding(.top, 4)
         }
-    }
-
-    // MARK: - Clipboard
-
-    private var clipboard: some View {
-        let clip = bridge.clipboard
-        let on = model.isOn(.clipboardHelper)
-        return Group {
-            header(helper.clipboardTitle, text.clipboardSubtitle)
-            FrostCard(title: helper.clipboardTitle, icon: "doc.on.clipboard") {
-                row(setup.clipboard, .clipboardHelper)
-                if on {
-                    HStack(spacing: 8) {
-                        Button(helper.openClipboard) { bridge.openClipboard() }.buttonStyle(FrostButtonStyle(compact: true))
-                        Button(helper.openEmoji) { bridge.openEmoji() }.buttonStyle(FrostButtonStyle(prominent: false, compact: true))
-                    }
-                }
-            }
-            FrostCard(title: text.shortcutsLabel, icon: "command") {
-                shortcutRow(text.openClipboardRow, clip?.shortcut ?? "fn V")
-                FrostHairline()
-                shortcutRow(text.openEmojiRow, clip?.emojiShortcut ?? "fn E")
-                Button(text.change) { bridge.openClipboardSettings() }
-                    .buttonStyle(FrostButtonStyle(prominent: false, compact: true))
-            }
-            .disabled(clip == nil)
-            FrostCard(title: text.historyLabel, icon: "clock.arrow.circlepath") {
-                FrostToggleRow(title: text.pasteAfterPick, isOn: Binding(
-                    get: { clip?.pasteAfterPick ?? false },
-                    set: { bridge.setClipboard(\.pasteAfterPick, $0, .pasteAfterPick($0)) }))
-                FrostHairline()
-                FrostToggleRow(title: text.smartCleanup, isOn: Binding(
-                    get: { clip?.smartCleanup ?? false },
-                    set: { bridge.setClipboard(\.smartCleanup, $0, .smartCleanup($0)) }))
-                FrostHairline()
-                HStack(spacing: 6) {
-                    Text(text.keepUpTo).font(.system(size: 13)).foregroundColor(Frost.text)
-                    Spacer(minLength: 8)
-                    ForEach([200, 500, 1000, 0], id: \.self) { count in
-                        FrostChip(label: count == 0 ? text.noLimit : "\(count)", on: clip?.maxItems == count) {
-                            bridge.setClipboard(\.maxItems, count, .maxItems(count))
-                        }
-                    }
-                }
-                .padding(.vertical, 3)
-            }
-            .disabled(clip == nil)
-            if !on {
-                Text(text.clipboardOffHint).font(.system(size: 11)).foregroundColor(Frost.muted).padding(.horizontal, 4)
-            }
-        }
-    }
-
-    private func shortcutRow(_ title: String, _ keys: String) -> some View {
-        HStack {
-            Text(title).font(.system(size: 13)).foregroundColor(Frost.text)
-            Spacer(minLength: 8)
-            Text(keys).font(.system(size: 12, weight: .semibold)).foregroundColor(Frost.text)
-                .padding(.horizontal, 9).padding(.vertical, 4)
-                .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Frost.text.opacity(0.07)))
-        }
-        .padding(.vertical, 3)
-    }
-
-    // MARK: - Quick Ring
-
-    private var quickRing: some View {
-        Group {
-            header(ring.title, ring.hubDescription)
-            FrostCard(title: ring.title, icon: "circle.circle") {
-                row(ring.title, .quickRing)
-            }
-            FrostCard(title: text.howItOpens, icon: "hand.tap") {
-                row(ring.controlDoubleTap, .ringDoubleTap)
-                FrostHairline()
-                row(ring.controlClick, .ringControlClick, detail: ring.controlClickCaption)
-                FrostHairline()
-                row(ring.middleClick, .ringMiddleClick, detail: ring.middleClickCaption)
-            }
-            FrostCard(title: text.whatsInIt, icon: "square.grid.2x2") {
-                HStack(spacing: 10) {
-                    ForEach([QuickRingItem.capture, .record, .clipboard, .windows], id: \.self) { item in
-                        VStack(spacing: 6) {
-                            Image(systemName: item.symbolName).font(.system(size: 17, weight: .medium))
-                                .foregroundStyle(Frost.accentGradient).frame(height: 22)
-                            Text(item.title(ring)).font(.system(size: 11.5, weight: .medium)).foregroundColor(Frost.text)
-                                .lineLimit(1)
-                        }
-                        .frame(maxWidth: .infinity).padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Frost.text.opacity(0.035)))
-                    }
-                }
-                if model.isOn(.quickRing) {
-                    Button(ring.tryIt) { QuickRingService.shared.open() }
-                        .buttonStyle(FrostButtonStyle(prominent: false, compact: true))
-                }
-            }
-        }
-    }
-
-    // MARK: - Windows & apps, capture, lid
-
-    private var windowsApps: some View {
-        Group {
-            header(text.windowsApps, text.windowsAppsSubtitle)
-            FrostCard(title: text.windowsApps, icon: "macwindow.on.rectangle") {
-                row(setup.switcher, .switcher, icon: GsMacEssential.switcher.symbolName)
-                FrostHairline()
-                row(setup.closeQuits, .closeQuits, icon: GsMacEssential.closeQuits.symbolName)
-                FrostHairline()
-                row(setup.snapping, .snapping, icon: GsMacEssential.snapping.symbolName)
-                FrostHairline()
-                row(setup.cutPaste, .cutPaste, icon: GsMacEssential.cutPaste.symbolName)
-            }
-        }
-    }
-
-    private var capture: some View {
-        Group {
-            header(text.capture, text.captureSubtitle)
-            FrostCard(title: text.capture, icon: "camera.viewfinder") {
-                row(setup.screenshot, .screenshot, icon: GsMacEssential.screenshot.symbolName)
-                FrostHairline()
-                row(setup.recorder, .recorder, icon: GsMacEssential.recorder.symbolName)
-            }
-        }
-    }
-
-    private var lidClosed: some View {
-        Group {
-            header(text.lidClosed, text.lidSubtitle)
-            FrostCard(title: text.lidClosed, icon: "moon.zzz") {
-                row(setup.lidClosed, .lidClosed, detail: l10n.s.clamshellNeedsPassword)
-                FrostHairline()
-                row(l10n.s.dimScreenOnLidCloseTitle, .dimOnLidClose)
-            }
-        }
-    }
-
-    // MARK: - More
-
-    private var more: some View {
-        Group {
-            header(text.more, text.moreSubtitle)
-            FrostCard(title: text.toolsLabel, icon: "square.grid.2x2") {
-                let features = model.moreFeatures
-                let hub = FeatureStrings.hub(l10n.language)
-                ForEach(features, id: \.self) { feature in
-                    if feature != features.first { FrostHairline() }
-                    FrostToggleRow(title: feature.hubTitle(l10n.s, hub: hub), icon: feature.symbolName,
-                                   isOn: model.featureBinding(feature))
-                }
-            }
-            FrostCard(title: text.appLabel, icon: "gearshape") {
-                HStack {
-                    Text(l10n.s.languageLabel).font(.system(size: 13)).foregroundColor(Frost.text)
-                    Spacer(minLength: 8)
-                    Menu(l10n.language.displayName) {
-                        ForEach(AppLanguage.allCases) { language in
-                            Button(language.displayName) { l10n.language = language }
-                        }
-                    }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
-                }
-                .padding(.vertical, 3)
-                FrostHairline()
-                FrostToggleRow(title: l10n.s.launchAtLogin, isOn: Binding(get: { launchAtLogin }, set: { on in
-                    launchAtLogin = on
-                    LaunchAtLogin.setEnabled(on) { registration, _ in launchAtLogin = registration == .enabled }
-                }))
-                FrostHairline()
-                HStack(spacing: 8) {
-                    Button(text.advanced) { (NSApp.delegate as? AppDelegate)?.openSettingsWindow() }
-                        .buttonStyle(FrostButtonStyle(compact: true))
-                    Button(l10n.s.menuAbout) { showAbout() }
-                        .buttonStyle(FrostButtonStyle(prominent: false, compact: true))
-                    Spacer(minLength: 0)
-                    Button(l10n.s.menuQuit) { NSApp.terminate(nil) }
-                        .buttonStyle(FrostButtonStyle(prominent: false, compact: true))
-                }
-                .padding(.top, 4)
-            }
-            .onAppear { LaunchAtLogin.refresh { launchAtLogin = $0 == .enabled } }
-        }
+        .onAppear { LaunchAtLogin.refresh { launchAtLogin = $0 == .enabled } }
     }
 
     private func showAbout() {
@@ -416,12 +200,192 @@ struct AvengersPageView: View {
                                          attributes: [.font: NSFont.systemFont(ofSize: 11)])
         NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
     }
+
+    // MARK: - Windows sharing
+
+    private var sharingPage: some View {
+        Group {
+            header(text.sharing, text.sharingSubtitle)
+            if share.running, !share.trusted {
+                FrostCard(title: home.sharing, icon: "hand.raised.fill") {
+                    Text(text.accessNeeded).font(.system(size: 13)).foregroundColor(Frost.text)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(l10n.s.permissionRequest) { Permissions.shared.requestAccessibility() }
+                        .buttonStyle(FrostButtonStyle(compact: true))
+                }
+            }
+            laptopCard
+            if share.running { pairingCard }
+            FrostCard(title: text.layoutLabel, icon: "rectangle.on.rectangle") {
+                Text(share.peerId.isEmpty ? text.layoutEmpty : text.layoutHint)
+                    .font(.system(size: 12.5)).foregroundColor(Frost.muted)
+                AvengersArrangeStage(text: text, model: model)
+            }
+            FrostCard(title: text.pointerLabel, icon: "cursorarrow.motionlines") {
+                FrostSliderRow(title: text.pointerSpeed, value: Binding(
+                    get: { share.mouseSpeed }, set: { SharingEngine.shared.setMouseSpeed($0) }), range: 0.4...2.5)
+                FrostSliderRow(title: text.scrollSpeed, value: Binding(
+                    get: { share.scrollSpeed }, set: { SharingEngine.shared.setScrollSpeed($0) }), range: 0.2...3)
+                FrostHairline()
+                FrostToggleRow(title: text.reverseScroll, isOn: Binding(
+                    get: { share.reverseScroll }, set: { SharingEngine.shared.setReverseScroll($0) }))
+                FrostHairline()
+                FrostToggleRow(title: text.shareClipboard, isOn: Binding(
+                    get: { share.shareClipboard }, set: { SharingEngine.shared.setShareClipboard($0) }))
+            }
+            Text(text.homeKeyHint).font(.system(size: 11)).foregroundColor(Frost.muted).padding(.horizontal, 4)
+        }
+    }
+
+    private var pairingCard: some View {
+        FrostCard(title: text.pairingLabel, icon: "link") {
+            if let code = share.pairCode {
+                Text(text.pairCheck).font(.system(size: 13)).foregroundColor(Frost.text)
+                HStack(spacing: 7) {
+                    ForEach(Array(code.enumerated()), id: \.offset) { index, digit in
+                        FrostPairDigit(digit: digit).padding(.leading, index == 3 ? 8 : 0)
+                    }
+                }
+                if share.pairConfirmed {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text(text.pairWaiting).font(.system(size: 12)).foregroundColor(Frost.muted)
+                    }
+                } else {
+                    Button(text.pairButton) { SharingEngine.shared.confirmPair() }
+                        .buttonStyle(FrostButtonStyle(compact: true))
+                }
+            } else if share.paired, !share.peer.isEmpty {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill").foregroundColor(Frost.ok)
+                    Text(String(format: text.pairedWithFormat, share.peer)).font(.system(size: 13)).foregroundColor(Frost.text)
+                }
+            } else {
+                FrostStep(number: 1, text: text.notPaired, done: share.paired)
+            }
+        }
+    }
+
+    // MARK: - Keyboard rules (sharing)
+
+    private var keyboardPage: some View {
+        Group {
+            header(text.keyboard, text.keyboardSubtitle)
+            let rules = share.rules
+            let groups = rules.reduce(into: [String]()) { if !$0.contains($1.group) { $0.append($1.group) } }
+            FrostCard(title: text.keyboard, icon: "keyboard") {
+                ForEach(groups, id: \.self) { group in
+                    AvengersKeyGroup(group: group, rules: rules.filter { $0.group == group },
+                                     startOpen: group == groups.first, countFormat: text.countFormat)
+                }
+            }
+        }
+    }
+
+    // MARK: - Clipboard
+
+    private var clipboardPage: some View {
+        Group {
+            header(setup.clipboard, text.clipboardSubtitle)
+            FrostCard(title: setup.clipboard, icon: "doc.on.clipboard") {
+                FrostToggleRow(title: setup.clipboard, isOn: model.binding(.clipboardHistory))
+            }
+            FrostCard(title: text.shortcutsLabel, icon: "command") {
+                HStack {
+                    Text(text.openClipboardRow).font(.system(size: 13)).foregroundColor(Frost.text)
+                    Spacer(minLength: 8)
+                    ShortcutRecorder(slot: .clipboard)
+                }
+                FrostHairline()
+                HStack {
+                    Text(text.openEmojiRow).font(.system(size: 13)).foregroundColor(Frost.text)
+                    Spacer(minLength: 8)
+                    ShortcutRecorder(slot: .emoji)
+                }
+            }
+            FrostCard(title: text.historyLabel, icon: "clock.arrow.circlepath") {
+                FrostToggleRow(title: text.pasteAfterPick, isOn: model.pasteAfterPick)
+                FrostHairline()
+                FrostToggleRow(title: text.smartCleanup, isOn: model.smartCleanup)
+                FrostHairline()
+                HStack(spacing: 6) {
+                    Text(text.keepUpTo).font(.system(size: 13)).foregroundColor(Frost.text)
+                    Spacer(minLength: 8)
+                    ForEach([200, 500, 1000, 0], id: \.self) { count in
+                        FrostChip(label: count == 0 ? text.noLimit : "\(count)", on: model.maxItems == count) {
+                            model.setMaxItems(count)
+                        }
+                    }
+                }
+                .padding(.vertical, 3)
+            }
+        }
+    }
+
+    // MARK: - Capture and switcher shortcuts
+
+    private func shortcutRow(_ title: String, key: String, fallback: GlobalShortcut) -> some View {
+        HStack {
+            Text(title).font(.system(size: 13)).foregroundColor(Frost.text)
+            Spacer(minLength: 8)
+            ShortcutRecorderButton(shortcut: model.shortcut(key, fallback: fallback), isEnabled: true,
+                                   waitingTitle: home.pressKeys, invalidAction: {},
+                                   captureAction: { model.setShortcut($0, for: key) })
+                .frame(width: 150)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private var capturePage: some View {
+        Group {
+            header(text.capture, text.captureSubtitle)
+            FrostCard(title: text.capture, icon: "camera.viewfinder") {
+                ForEach([AppFeature.screenshot, .screenRecorder, .screenOCR, .quickRing], id: \.self) { feature in
+                    if feature != .screenshot { FrostHairline() }
+                    FrostToggleRow(title: title(feature), icon: feature.symbolName, isOn: model.binding(feature))
+                }
+            }
+            FrostCard(title: text.shortcutsLabel, icon: "command") {
+                shortcutRow(setup.screenshot, key: DefaultsKey.screenshotShortcut, fallback: .screenshotDefault)
+                FrostHairline()
+                shortcutRow(setup.recorder, key: DefaultsKey.recorderShortcut, fallback: .screenRecorderDefault)
+                FrostHairline()
+                shortcutRow(home.screenOCR, key: DefaultsKey.screenOCRShortcut, fallback: .screenOCRDefault)
+                FrostHairline()
+                shortcutRow(setup.switcher, key: DefaultsKey.switcherShortcut,
+                            fallback: GlobalShortcut(storageValue: "command:48")!)
+            }
+            if model.isOn(.quickRing) {
+                Button(ring.tryIt) { QuickRingService.shared.open() }
+                    .buttonStyle(FrostButtonStyle(prominent: false, compact: true))
+            }
+        }
+    }
+
+    // MARK: - Keep awake
+
+    private var keepAwakePage: some View {
+        Group {
+            header(home.keepAwake, text.lidSubtitle)
+            FrostCard(title: home.keepAwake, icon: "moon.zzz") {
+                FrostToggleRow(title: home.keepAwakeNow, isOn: model.binding(.keepAwake))
+                FrostHairline()
+                FrostToggleRow(title: setup.lidClosed, detail: l10n.s.clamshellNeedsPassword, isOn: model.lidClosed)
+                FrostHairline()
+                FrostToggleRow(title: l10n.s.dimScreenOnLidCloseTitle, isOn: model.dimOnLidClose)
+            }
+            FrostCard(title: text.shortcutsLabel, icon: "command") {
+                shortcutRow(home.keepAwake, key: DefaultsKey.keepAwakeShortcut,
+                            fallback: GlobalShortcut(storageValue: "control+option+command:40")!)
+            }
+        }
+    }
 }
 
 /// One group of Windows-habit switches; tap the title to open or close it.
 struct AvengersKeyGroup: View {
     let group: String
-    let rules: [HelperWire.ShareRule]
+    let rules: [SharingRule]
     let startOpen: Bool
     let countFormat: String
     @State private var open: Bool?
@@ -454,7 +418,7 @@ struct AvengersKeyGroup: View {
                         Text(rule.mac).font(.system(size: 12)).foregroundColor(Frost.muted).lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 6)
-                        Toggle(isOn: Binding(get: { rule.on }, set: { HelperBridge.shared.setRule(rule.id, $0) })) { EmptyView() }
+                        Toggle(isOn: Binding(get: { rule.on }, set: { SharingEngine.shared.setRule(rule.id, $0) })) { EmptyView() }
                             .toggleStyle(FrostToggleStyle()).fixedSize()
                     }
                     .opacity(rule.on ? 1 : 0.55)
@@ -472,14 +436,14 @@ struct AvengersKeyGroup: View {
 /// side goes to the sharing helper.
 struct AvengersArrangeStage: View {
     let text: AvengersStrings
-    @ObservedObject private var bridge = HelperBridge.shared
+    @ObservedObject var model: AvengersModel
     @State private var drag: CGSize = .zero
     @State private var dragging = false
 
     private let macSize = CGSize(width: 120, height: 78)
     private let winSize = CGSize(width: 132, height: 80)
 
-    private var share: HelperWire.ShareState? { bridge.sharing }
+    private var share: SharingSnapshot? { model.sharing }
     private var side: Int { share?.side ?? 1 }
     private var hasPeer: Bool { share?.peerId.isEmpty == false }
 
@@ -538,7 +502,7 @@ struct AvengersArrangeStage: View {
                             let next = nearest(CGSize(width: base.width + value.translation.width,
                                                       height: base.height + value.translation.height))
                             withAnimation(.spring(response: 0.42, dampingFraction: 0.68)) {
-                                bridge.setShare(\.side, next, .side(next))
+                                SharingEngine.shared.setSide(next)
                                 drag = .zero
                                 dragging = false
                             }

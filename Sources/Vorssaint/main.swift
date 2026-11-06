@@ -1,18 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Vorssaint
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
 
 import AppKit
 
-// Select backup mode before cleanup and diagnostic arguments can act. Invalid
-// backup commands must leave files, input mappings and recovery journals alone.
-if let command = SettingsBackupSupport.command(in: CommandLine.arguments) {
-    SettingsBackup.runCommandAndExit(command)
-}
-
-SuperKeyMappingGuard.runIfRequestedAndExit()
 Defaults.register()
-MouseAccelerationGuard.runIfRequestedAndExit()
-MouseAccelerationService.recoverPendingAtLaunch()
 
 if CommandLine.arguments.contains("--selftest") {
     SelfTest.runAndExit()
@@ -23,16 +15,10 @@ if let flag = CommandLine.arguments.firstIndex(of: "--avengers-snapshot"), flag 
         index + 1 < CommandLine.arguments.count
             ? CommandLine.arguments[index + 1].split(separator: ",").compactMap { AvengersPage(rawValue: String($0)) }
             : nil
-    } ?? [.home, .sharing]
+    } ?? [.home]
     AvengersSnapshot.runAndExit(folder: CommandLine.arguments[flag + 1], pages: pages)
 }
 #endif
-if CommandLine.arguments.contains("--sensors") {
-    SensorDump.runAndExit()
-}
-if CommandLine.arguments.contains("--uninstall") {
-    Uninstaller.runAndExit()
-}
 
 let app = NSApplication.shared
 let delegate = AppDelegate()

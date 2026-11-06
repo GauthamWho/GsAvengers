@@ -254,7 +254,7 @@ struct RecorderInspector: View {
             Slider(value: Binding(get: { value }, set: onChange), in: 0...1)
                 .controlSize(.mini)
                 .onTapGesture(count: 2) { onReset() }
-            Text(String(format: "%.0f%%", locale: MetricFormat.locale, value * 100))
+            Text(String(format: "%.0f%%", locale: .current, value * 100))
                 .font(.system(size: 10.5, weight: .medium))
                 .monospacedDigit()
                 .foregroundStyle(Color(white: 0.86))

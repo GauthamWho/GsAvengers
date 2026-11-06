@@ -156,7 +156,7 @@ enum DockTileResolver {
         let described = instances.map {
             DockAppInstance(pid: $0.processIdentifier,
                             launchTime: DockClickSupport.launchTime(
-                                processStartMicroseconds: KillProcessService.startTime(for: $0.processIdentifier),
+                                processStartMicroseconds: processStartTime($0.processIdentifier),
                                 launchDate: $0.launchDate))
         }
         let hit = TileKey(element: tile)
@@ -236,4 +236,12 @@ enum DockTileResolver {
             return (nil, false)
         }
     }
+}
+
+/// When a process started, in microseconds since 1970; nil when it is gone.
+private func processStartTime(_ pid: pid_t) -> UInt64? {
+    var info = proc_bsdinfo()
+    let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+    guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return nil }
+    return info.pbi_start_tvsec &* 1_000_000 &+ info.pbi_start_tvusec
 }

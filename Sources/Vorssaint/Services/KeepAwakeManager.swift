@@ -892,7 +892,7 @@ final class KeepAwakeManager: ObservableObject {
         guard generation == lidSleepGeneration else { return }
         lidSleepAttemptsRemaining = 0
         guard !isActive || sessionPausedForScreenLock, !clamshellActive else { return }
-        guard BrightnessService.lidClosed() == true, Self.lidSleepIsAllowed() else { return }
+        guard LidDisplayDimmer.lidClosed() == true, Self.lidSleepIsAllowed() else { return }
         let rootDomain = IOPMFindPowerManagement(kIOMainPortDefault)
         guard rootDomain != 0 else { return }
         let result = IOPMSleepSystem(rootDomain)
@@ -1043,7 +1043,7 @@ final class KeepAwakeManager: ObservableObject {
         }
         lidDimmingNotificationPort = port
         IONotificationPortSetDispatchQueue(port, DispatchQueue.main)
-        lidClosedForDimming = BrightnessService.lidClosed()
+        lidClosedForDimming = LidDisplayDimmer.lidClosed()
         // The option can be enabled from an external display while the lid is
         // already shut. No transition follows registration in that case.
         if armed, lidClosedForDimming == true, savedDisplayBrightness == nil {
@@ -1059,7 +1059,7 @@ final class KeepAwakeManager: ObservableObject {
     /// as a no-op instead of acting on a mode that already ended.
     private func lidStateMayHaveChangedForDimming() {
         guard (clamshellActive && dimScreenOnLidClose) || savedDisplayBrightness != nil else { return }
-        let closed = BrightnessService.lidClosed() ?? false
+        let closed = LidDisplayDimmer.lidClosed() ?? false
         guard closed != lidClosedForDimming else { return }
         lidClosedForDimming = closed
         if closed {

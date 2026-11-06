@@ -1,364 +1,110 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Vorssaint
+// Copyright (C) 2026 GauthamWho (G’s Avengers)
 
 import Foundation
 
-/// Every feature the Features hub can switch off entirely. The raw value is
-/// the stable identity persisted inside the availability key, so cases can be
-/// added but never renamed.
+/// The thirteen features of G’s Avengers. The raw value is the stable
+/// identity persisted inside the availability key, so cases are never renamed.
 ///
-/// Availability is a layer ABOVE each feature's own enable key: an unavailable
-/// feature disappears from Settings, the menu panel and the menu bar, and its
-/// service tears down (and never instantiates on the next launch). Turning a
-/// feature back on restores saved enable choices. A first install turns on its
-/// primary control when no enable choice was saved before.
+/// Each feature has ONE on/off switch on the Home page. The switch is the
+/// feature's availability key together with its own enable keys, so the
+/// Home page, the feature's own page and the running service always read the
+/// same preferences. A feature that is off never starts its service.
 enum AppFeature: String, CaseIterable {
-    // Windows and Dock
-    case switcher, dockPreview, dockClick, windowMaximizer, windowLayout, autoQuit, spacesOrder
-    // Mouse and keyboard
-    case scrollInverter, scrollHorizontal, scrollZoom, focusFollowsMouse, smoothScroll, linearScroll, mouseAcceleration, mouseNavigation, mouseButtonShortcuts, middleClick,
-         mouseClickDebounce, keyboardDebounce, textSnippets, superKey, quitWindowProtection
-    // Clipboard and files
-    case clipboardHistory, pastePlain, finderCutPaste, finderRename, shelf, urlCleaner,
-         diskImageInstaller
-    // Sound
-    case mixer, soundOutputSwitcher, audioPriority, micMute, musicBlock
-    // Energy and display
-    case keepAwake, brightness, extraBrightness, bluetoothSleep
-    // Tools
-    case quickLauncher, quickToggles, quitApps, colorPicker, screenOCR, cleaningMode, mediaTools,
-         cleaner, uninstaller, homebrew, appUpdates, screenshot, cameraPreview, radialMenu, scratchpad,
-         commandBar, screenRecorder, wallpaper, killProcess, portManager, quickRing
-    // System monitor, one entry per metric family (temperatures live with
-    // their parent metric: CPU temp with CPU, battery temp with power).
-    case monitorCPU, monitorGPU, monitorMemory, monitorNetwork, monitorDisk, monitorPower, connectedDevices, fanControl
+    case switcher, autoQuit, windowLayout, dockPreview, finderCutPaste
+    case sharing, clipboardHistory, urlCleaner
+    case screenshot, screenRecorder, screenOCR, quickRing
+    case keepAwake
 }
 
-/// Hub sections, in display order.
+/// Home page sections, in display order.
 enum FeatureGroup: String, CaseIterable {
-    case windowsDock, mouseKeyboard, clipboardFiles, sound, energyDisplay, tools, monitor
+    case windowsHabits, sharingClipboard, capture, power
 }
 
-/// System permissions surfaced by the hub's transparency portal.
+/// System permissions the features use.
 enum AppPermission: String, CaseIterable {
-    case accessibility, screenRecording, fullDiskAccess, filesAndFolders, notifications,
-         automationFinder, audioCapture, microphone, camera, appManagement
-}
-
-enum PermissionPollingSupport {
-    static func interval(visibleSurfaceCount: Int,
-                         accessibilityIsNeeded: Bool,
-                         screenRecordingIsNeeded: Bool,
-                         accessibilityIsGranted: Bool,
-                         screenRecordingIsGranted: Bool) -> TimeInterval? {
-        guard visibleSurfaceCount > 0 || accessibilityIsNeeded || screenRecordingIsNeeded else {
-            return nil
-        }
-        if visibleSurfaceCount > 0
-            || (accessibilityIsNeeded && !accessibilityIsGranted)
-            || (screenRecordingIsNeeded && !screenRecordingIsGranted) {
-            return 2.5
-        }
-        return 60
-    }
+    case accessibility, screenRecording, automationFinder, audioCapture, microphone
 }
 
 extension AppFeature {
-    /// Whether an engaged feature needs permission changes while it sits in
-    /// the background. One-shot tools ask and refresh at the moment they run;
-    /// polling for those just because their tile is installed wastes wakeups.
-    func monitorsPermissionChanges(edgeSnapDisabledZones: String? = nil,
-                                   boolFor: (String) -> Bool) -> Bool {
-        switch self {
-        case .windowLayout:
-            return boolFor(DefaultsKey.windowLayoutShortcutsEnabled)
-                || boolFor(DefaultsKey.windowGestureEnabled)
-                || (boolFor(DefaultsKey.windowEdgeSnapEnabled)
-                    && !WindowEdgeSnapZone.enabledZones(
-                        from: edgeSnapDisabledZones
-                    ).isEmpty)
-        // Watch asks when an area is chosen and checks on every reading. The
-        // companion uses no permission at all.
-        case .screenOCR, .cleaningMode, .screenshot, .commandBar, .screenRecorder, .wallpaper:
-            return false
-        default:
-            return true
-        }
-    }
-
-    var monitorsPermissionChanges: Bool {
-        monitorsPermissionChanges(
-            edgeSnapDisabledZones: UserDefaults.standard.string(
-                forKey: DefaultsKey.windowEdgeSnapDisabledZones
-            ),
-            boolFor: UserDefaults.standard.bool(forKey:)
-        )
-    }
-
     var group: FeatureGroup {
         switch self {
-        case .switcher, .dockPreview, .dockClick, .windowMaximizer, .windowLayout, .autoQuit, .spacesOrder:
-            return .windowsDock
-        case .scrollInverter, .scrollHorizontal, .scrollZoom, .focusFollowsMouse, .smoothScroll, .linearScroll, .mouseAcceleration, .mouseNavigation, .mouseButtonShortcuts, .middleClick,
-             .keyboardDebounce, .textSnippets, .superKey, .quitWindowProtection, .mouseClickDebounce:
-            return .mouseKeyboard
-        case .clipboardHistory, .pastePlain, .finderCutPaste, .finderRename, .shelf, .urlCleaner,
-             .diskImageInstaller:
-            return .clipboardFiles
-        case .mixer, .soundOutputSwitcher, .audioPriority, .micMute, .musicBlock:
-            return .sound
-        case .keepAwake, .brightness, .extraBrightness, .bluetoothSleep:
-            return .energyDisplay
-        case .quickLauncher, .quickToggles, .quitApps, .colorPicker, .screenOCR, .cleaningMode, .mediaTools,
-             .cleaner, .uninstaller, .homebrew, .appUpdates, .screenshot, .cameraPreview, .radialMenu,
-             .scratchpad, .commandBar, .screenRecorder, .wallpaper, .killProcess, .portManager,
-             .quickRing:
-            return .tools
-        case .monitorCPU, .monitorGPU, .monitorMemory, .monitorNetwork, .monitorDisk, .monitorPower,
-             .connectedDevices, .fanControl:
-            return .monitor
+        case .switcher, .autoQuit, .windowLayout, .dockPreview, .finderCutPaste: return .windowsHabits
+        case .sharing, .clipboardHistory, .urlCleaner: return .sharingClipboard
+        case .screenshot, .screenRecorder, .screenOCR, .quickRing: return .capture
+        case .keepAwake: return .power
         }
     }
 
     var symbolName: String {
         switch self {
         case .switcher: return "rectangle.on.rectangle"
+        case .autoQuit: return "xmark.app"
+        case .windowLayout: return "rectangle.split.2x1"
         case .dockPreview: return "dock.rectangle"
-        case .dockClick: return "dock.arrow.down.rectangle"
-        case .windowMaximizer: return "arrow.up.left.and.arrow.down.right"
-        case .windowLayout: return "rectangle.3.group"
-        case .autoQuit: return "xmark.rectangle"
-        case .spacesOrder: return "rectangle.split.3x1"
-        case .scrollInverter: return "arrow.up.arrow.down"
-        case .scrollHorizontal: return "arrow.triangle.swap"
-        case .scrollZoom: return "plus.magnifyingglass"
-        case .focusFollowsMouse: return "cursorarrow.and.square.on.square.dashed"
-        case .smoothScroll: return "cursorarrow.motionlines"
-        case .linearScroll: return "arrow.up.and.down.text.horizontal"
-        case .mouseAcceleration: return "cursorarrow.rays"
-        case .mouseNavigation: return "arrow.left.arrow.right"
-        case .mouseButtonShortcuts: return "button.programmable"
-        case .middleClick: return "hand.tap"
-        case .keyboardDebounce: return "keyboard"
-        case .textSnippets: return "text.append"
-        case .superKey:
-            return SuperKeySource.sanitized(
-                UserDefaults.standard.string(forKey: DefaultsKey.superKeySource)
-            ).systemImage
-        case .mouseClickDebounce: return "cursorarrow.click"
-        case .quitWindowProtection: return "shield.lefthalf.filled"
-        case .clipboardHistory: return "doc.on.clipboard"
-        case .pastePlain: return "doc.plaintext"
         case .finderCutPaste: return "scissors"
-        case .finderRename: return "pencil"
-        case .shelf: return "tray.full"
+        case .sharing: return "pc"
+        case .clipboardHistory: return "doc.on.clipboard"
         case .urlCleaner: return "link"
-        case .diskImageInstaller: return "externaldrive.badge.plus"
-        case .mixer: return "speaker.wave.2"
-        case .soundOutputSwitcher: return "hifispeaker"
-        case .audioPriority: return "list.number"
-        case .micMute: return "mic.slash"
-        case .musicBlock: return "music.note"
-        case .keepAwake: return "moon.zzz.fill"
-        case .brightness: return "display.2"
-        case .extraBrightness: return "sun.max.fill"
-        case .bluetoothSleep: return "wave.3.right.circle"
-        case .quickLauncher: return "wand.and.rays"
-        case .quickToggles: return "togglepower"
-        case .quitApps: return "xmark.app"
-        case .colorPicker: return "eyedropper"
-        case .screenOCR: return "text.viewfinder"
-        case .cleaningMode: return "bubbles.and.sparkles"
-        case .mediaTools: return "photo.on.rectangle.angled"
-        case .cleaner: return "sparkles"
-        case .uninstaller: return "trash"
-        case .homebrew: return "shippingbox"
-        case .appUpdates: return "arrow.down.app"
         case .screenshot: return "camera.viewfinder"
         case .screenRecorder: return "record.circle"
-        case .cameraPreview: return "web.camera"
-        case .wallpaper: return "photo.on.rectangle"
-        case .radialMenu: return "circle.grid.cross"
-        case .scratchpad: return "note.text"
-        case .commandBar: return "command"
-        case .killProcess: return "xmark.octagon"
-        case .portManager: return "network"
+        case .screenOCR: return "text.viewfinder"
         case .quickRing: return "circle.circle"
-        case .monitorCPU: return "cpu"
-        case .monitorGPU: return "rectangle.connected.to.line.below"
-        case .monitorMemory: return "memorychip"
-        case .monitorNetwork: return "network"
-        case .monitorDisk: return "internaldrive"
-        case .monitorPower: return "bolt.fill"
-        case .connectedDevices: return "cable.connector"
-        case .fanControl: return "fanblades.fill"
+        case .keepAwake: return "moon.zzz"
         }
     }
 
     var availabilityKey: String { DefaultsKey.featureAvailable(rawValue) }
 
-    var isBeta: Bool { self == .fanControl || self == .killProcess }
-
-    /// Availability read straight from defaults. Existing features stay
-    /// available on update; explicit beta opt-ins may start unavailable.
-    var isAvailable: Bool {
-        isAvailable(in: .standard)
+    /// The feature's own enable keys. On means available AND (no keys, or
+    /// any key on). Switching on sets every key; off clears every key.
+    var enabledKeys: [String] {
+        switch self {
+        case .switcher: return [DefaultsKey.switcherEnabled]
+        case .autoQuit: return [DefaultsKey.autoQuitEnabled]
+        case .windowLayout: return [DefaultsKey.windowEdgeSnapEnabled, DefaultsKey.windowLayoutShortcutsEnabled]
+        case .dockPreview: return [DefaultsKey.dockPreviewEnabled]
+        case .finderCutPaste: return [DefaultsKey.finderCutPasteEnabled]
+        case .sharing: return [DefaultsKey.sharingEnabled]
+        case .clipboardHistory: return [DefaultsKey.gsavClipboardHelperEnabled]
+        case .urlCleaner: return [DefaultsKey.urlCleanerEnabled]
+        case .quickRing: return [DefaultsKey.quickRingControlDoubleTap]
+        case .screenshot, .screenRecorder, .screenOCR, .keepAwake: return []
+        }
     }
+
+    var isAvailable: Bool { isAvailable(in: .standard) }
 
     func isAvailable(in defaults: UserDefaults) -> Bool {
         defaults.bool(forKey: availabilityKey)
     }
 
-    /// The feature's own enable keys; any one being true means the feature is
-    /// engaged. Empty means the feature works on demand (a panel tile, a
-    /// context-menu action), so being available already counts as engaged for
-    /// the permissions portal.
-    var enabledKeys: [String] {
-        switch self {
-        case .switcher: return [DefaultsKey.switcherEnabled]
-        case .dockPreview: return [DefaultsKey.dockPreviewEnabled]
-        case .dockClick: return [DefaultsKey.dockClickMinimize,
-                                 DefaultsKey.dockClickHide,
-                                 DefaultsKey.dockClickCycleWindows]
-        case .windowMaximizer: return [DefaultsKey.windowMaximizeEnabled]
-        case .autoQuit: return [DefaultsKey.autoQuitEnabled]
-        case .spacesOrder: return [DefaultsKey.spacesOrderEnabled]
-        case .scrollInverter: return [DefaultsKey.scrollInverterEnabled,
-                                      DefaultsKey.scrollInverterHorizontalEnabled]
-        case .scrollHorizontal: return [DefaultsKey.scrollHorizontalEnabled]
-        case .scrollZoom: return [DefaultsKey.pinchZoomEnabled]
-        case .focusFollowsMouse: return [DefaultsKey.focusFollowsMouseEnabled]
-        case .smoothScroll: return [DefaultsKey.smoothScrollEnabled]
-        case .linearScroll: return [DefaultsKey.linearScrollEnabled]
-        case .mouseAcceleration: return [DefaultsKey.mouseAccelerationDisabled]
-        case .mouseNavigation: return [DefaultsKey.mouseNavigationEnabled]
-        case .mouseButtonShortcuts: return [DefaultsKey.mouseButtonShortcutsEnabled,
-                                            DefaultsKey.mouseSpacesGestureEnabled]
-        case .middleClick: return [DefaultsKey.middleClickEnabled]
-        case .keyboardDebounce: return [DefaultsKey.keyboardDebounceEnabled]
-        case .quitWindowProtection:
-            return [DefaultsKey.quitProtectionQuitEnabled, DefaultsKey.quitProtectionCloseEnabled]
-        case .textSnippets: return [DefaultsKey.textSnippetsEnabled, DefaultsKey.snippetLibraryEnabled]
-        case .superKey: return [DefaultsKey.superKeyEnabled]
-        case .mouseClickDebounce: return [DefaultsKey.mouseClickDebounceEnabled]
-        case .radialMenu: return [DefaultsKey.radialMenuEnabled]
-        case .quickRing: return [DefaultsKey.quickRingControlDoubleTap, DefaultsKey.quickRingControlClick,
-                                 DefaultsKey.quickRingMiddleClick]
-        case .clipboardHistory: return [DefaultsKey.clipboardHistoryEnabled]
-        case .pastePlain: return [DefaultsKey.pastePlainEnabled]
-        case .finderCutPaste: return [DefaultsKey.finderCutPasteEnabled,
-                                      DefaultsKey.finderPasteImageAsFile]
-        case .finderRename: return [DefaultsKey.finderRenameEnabled]
-        case .shelf: return [DefaultsKey.shelfEnabled]
-        case .urlCleaner: return [DefaultsKey.urlCleanerEnabled]
-        case .soundOutputSwitcher: return [DefaultsKey.soundOutputSwitcherEnabled]
-        case .audioPriority: return [DefaultsKey.audioPriorityOutputEnabled,
-                                     DefaultsKey.audioPriorityInputEnabled]
-        case .musicBlock: return [DefaultsKey.musicBlockEnabled]
-        case .brightness: return [DefaultsKey.brightnessControlEnabled]
-        case .extraBrightness: return [DefaultsKey.extraBrightnessEnabled]
-        case .bluetoothSleep: return [DefaultsKey.bluetoothSleepEnabled]
-        case .windowLayout, .diskImageInstaller, .mixer, .micMute, .keepAwake,
-             .quickLauncher, .quickToggles, .quitApps, .colorPicker, .screenOCR, .cleaningMode, .mediaTools,
-             .cleaner, .uninstaller, .homebrew, .appUpdates, .screenshot, .cameraPreview, .scratchpad,
-             .commandBar, .screenRecorder, .wallpaper, .killProcess, .portManager,
-             .monitorCPU, .monitorGPU, .monitorMemory, .monitorNetwork, .monitorDisk, .monitorPower,
-             .connectedDevices, .fanControl:
-            return []
-        }
+    /// The Home switch's value, read from the very preferences the feature runs on.
+    func isOn(in defaults: UserDefaults) -> Bool {
+        guard isAvailable(in: defaults) else { return false }
+        let keys = enabledKeys
+        return keys.isEmpty || keys.contains(where: defaults.bool(forKey:))
     }
 
-    /// Turn on the feature's main behavior at install time. Features with
-    /// several independent controls start with one useful behavior, except
-    /// audio priority, whose output and input controls work together.
-    private var initialEnableKeys: [String] {
-        switch self {
-        case .windowLayout: return [DefaultsKey.windowLayoutShortcutsEnabled]
-        case .audioPriority: return enabledKeys
-        default: return enabledKeys.first.map { [$0] } ?? []
-        }
+    var isOn: Bool { isOn(in: .standard) }
+
+    /// Writes the Home switch: availability plus every enable key.
+    func write(_ on: Bool, in defaults: UserDefaults) {
+        defaults.set(on, forKey: availabilityKey)
+        for key in enabledKeys { defaults.set(on, forKey: key) }
     }
 
-    /// Registered defaults are visible through `object(forKey:)`, so only the
-    /// persistent domain can tell a fresh install from a saved off choice.
-    func enableOnFirstInstall(in defaults: UserDefaults, savedValues: [String: Any]) {
-        let choices = self == .windowLayout
-            ? [DefaultsKey.windowLayoutShortcutsEnabled, DefaultsKey.windowDirectionalEnabled,
-               DefaultsKey.pointerDisplayEnabled, DefaultsKey.windowEdgeSnapEnabled,
-               DefaultsKey.windowGestureEnabled]
-            : enabledKeys
-        guard !choices.contains(where: { savedValues[$0] != nil }) else { return }
-        for key in initialEnableKeys {
-            defaults.set(true, forKey: key)
-        }
-    }
-
-    /// Which permissions the feature can use at all. Whether it is using them
-    /// RIGHT NOW is answered by `activeFeatures(using:)`, which also applies
-    /// the dynamic rules (simple-mode switcher needs no screen recording, the
-    /// monitor only notifies when an alert is on, and so on).
+    /// Which permissions the feature can use.
     var permissions: [AppPermission] {
         switch self {
-        case .mouseAcceleration, .spacesOrder:
-            return []
-        case .scrollInverter, .scrollHorizontal, .scrollZoom, .focusFollowsMouse, .smoothScroll, .linearScroll, .mouseNavigation, .mouseButtonShortcuts, .middleClick,
-             .keyboardDebounce, .textSnippets, .superKey, .mouseClickDebounce,
-             .dockClick, .windowMaximizer, .windowLayout,
-             .autoQuit, .quitWindowProtection, .cleaningMode, .pastePlain, .radialMenu,
-             // The bar reads other apps' menus and windows and types at the
-             // caret, all of it through Accessibility.
-             .commandBar,
-             // Element kinds and frames of the front window, never its text,
-             // and the system Zoom's own keys.
-             // Its triggers are event taps: ⌥ heard, the opening click taken.
-             .quickRing:
-            return [.accessibility]
+        case .switcher, .dockPreview: return [.accessibility, .screenRecording]
+        case .autoQuit, .windowLayout, .quickRing, .sharing, .clipboardHistory, .keepAwake: return [.accessibility]
         case .finderCutPaste: return [.accessibility, .automationFinder]
-        case .finderRename: return [.accessibility]
-        // Only emptying the Trash asks the Finder; every other quick toggle
-        // (dark mode included) works without a permission.
-        case .quickToggles: return [.automationFinder]
-        case .switcher: return [.accessibility, .screenRecording]
-        case .dockPreview: return [.accessibility, .screenRecording]
-        case .screenOCR: return [.screenRecording]
-        case .screenshot: return [.screenRecording]
-        // The sound of the Mac is read through an audio grant of its own.
-        // Microphone access stays contextual, and Accessibility only keeps
-        // typing timing.
+        case .screenshot, .screenOCR: return [.screenRecording]
         case .screenRecorder: return [.screenRecording, .accessibility, .audioCapture, .microphone]
-        case .cameraPreview: return [.camera]
-        case .keepAwake: return [.accessibility]
-        case .brightness: return [.accessibility]
-        case .cleaner: return [.fullDiskAccess, .filesAndFolders, .notifications]
-        case .uninstaller: return [.fullDiskAccess, .automationFinder]
-        case .homebrew: return [.appManagement]
-        case .appUpdates: return [.notifications, .appManagement]
-        case .diskImageInstaller: return [.appManagement]
-        case .mixer: return [.audioCapture, .accessibility]
-        case .musicBlock: return [.accessibility]
-        case .monitorCPU, .monitorMemory, .monitorDisk, .monitorPower: return [.notifications]
-        case .clipboardHistory, .shelf, .urlCleaner,
-             .soundOutputSwitcher, .audioPriority,
-             .extraBrightness, .bluetoothSleep, .quickLauncher, .colorPicker, .micMute, .mediaTools,
-             .scratchpad, .wallpaper, .monitorGPU, .monitorNetwork, .connectedDevices, .fanControl, .killProcess,
-             .portManager,
-             // Each app gets the ordinary quit request it would from its own menu.
-             .quitApps:
-            return []
-        }
-    }
-
-    /// Broad grants worth explaining during first run. Permissions used only
-    /// by an optional sub-feature stay contextual, at the moment that control
-    /// is actually used.
-    var onboardingPermissions: [AppPermission] {
-        switch self {
-        case .keepAwake, .brightness, .radialMenu, .quickToggles, .cleaner,
-             .uninstaller, .homebrew, .appUpdates, .mixer, .cameraPreview,
-             .micMute, .musicBlock:
-            return []
-        default:
-            return permissions.filter { $0 == .accessibility || $0 == .screenRecording }
+        case .urlCleaner: return []
         }
     }
 
@@ -366,164 +112,27 @@ extension AppFeature {
         allCases.filter { $0.group == group }
     }
 
-    var initialInstallGroup: [AppFeature] { [self] }
-
-    /// Switches the Features page may offer to uninstall once they turn out
-    /// never used. Each one does nothing until its own switch is on, and no
-    /// other feature leans on it while it is off. Features that lend a part
-    /// of themselves elsewhere stay out even when off: the radial menu, and
-    /// the switcher and text snippets that feed the Command Bar.
-    static let offeredWhenNeverSwitchedOn: [AppFeature] = [
-        .dockPreview, .dockClick, .windowMaximizer, .autoQuit,
-        .scrollInverter, .linearScroll, .focusFollowsMouse, .mouseAcceleration, .mouseNavigation,
-        .mouseButtonShortcuts, .middleClick, .keyboardDebounce, .mouseClickDebounce, .superKey,
-        .finderCutPaste,
-    ]
-
-    /// Installed features from that list whose switches are off and were never
-    /// saved on this Mac: installed, but not once turned on. A switch turned
-    /// on and back off is saved, so a feature someone used keeps its place.
-    static func neverSwitchedOn(isAvailable: (AppFeature) -> Bool,
-                                boolFor: (String) -> Bool,
-                                isSaved: (String) -> Bool) -> [AppFeature] {
-        offeredWhenNeverSwitchedOn.filter { feature in
-            isAvailable(feature)
-                && !feature.enabledKeys.isEmpty
-                && !feature.enabledKeys.contains(where: boolFor)
-                && !feature.enabledKeys.contains { isSaved($0) && !savedOnEveryMac.contains($0) }
-        }
-    }
-
-    /// Switches a launch migration saves on every Mac, the horizontal scroll
-    /// direction copying the vertical one, so a saved value there says
-    /// nothing about use. Only one that is on counts.
-    private static let savedOnEveryMac: Set<String> = [DefaultsKey.scrollInverterHorizontalEnabled]
-
-    /// Whether a Mac that never chose this feature has it installed. Most
-    /// people updating never saved an availability, so this list IS their
-    /// install: moving a feature out of it uninstalls it for all of them,
-    /// which is why a test pins it. The switch has no default on purpose, so
-    /// every new feature is placed here by decision. New features belong on
-    /// the opt-in side: an update should never grow the panel and Settings on
-    /// its own, and the Features page and release notes are where they get
-    /// installed. A feature split out of an existing one needs a migration
-    /// that copies its parent's availability instead.
-    var installedByDefault: Bool {
-        switch self {
-        case .switcher, .dockPreview, .dockClick, .windowMaximizer, .windowLayout, .autoQuit,
-             .scrollInverter, .smoothScroll, .mouseAcceleration, .mouseNavigation, .mouseButtonShortcuts,
-             .middleClick, .mouseClickDebounce, .keyboardDebounce, .textSnippets, .superKey,
-             .quitWindowProtection,
-             .clipboardHistory, .pastePlain, .finderCutPaste, .finderRename, .shelf, .urlCleaner,
-             .mixer, .soundOutputSwitcher, .micMute, .musicBlock,
-             .keepAwake, .brightness, .extraBrightness, .bluetoothSleep,
-             .quickLauncher, .quickToggles, .colorPicker, .screenOCR, .cleaningMode, .mediaTools,
-             .cleaner, .uninstaller, .homebrew, .appUpdates, .screenshot, .cameraPreview, .radialMenu,
-             .scratchpad, .commandBar, .screenRecorder,
-             .monitorCPU, .monitorGPU, .monitorMemory, .monitorNetwork, .monitorDisk, .monitorPower,
-             .connectedDevices:
-            return true
-        case .focusFollowsMouse, .scrollHorizontal, .scrollZoom, .linearScroll, .diskImageInstaller, .audioPriority,
-             .wallpaper, .killProcess, .portManager, .fanControl, .spacesOrder, .quitApps,
-             .quickRing:
-            return false
-        }
-    }
-
-    /// Registered defaults keep every feature an update already had and leave
-    /// opt-in features and explicit betas uninstalled.
+    /// Everything is on for a new install: the thirteen are the whole app.
     static var availabilityDefaults: [String: Any] {
-        Dictionary(uniqueKeysWithValues: allCases.map { ($0.availabilityKey, $0.installedByDefault) })
+        Dictionary(uniqueKeysWithValues: allCases.map { ($0.availabilityKey, true) })
     }
 
-    /// Features that are available, engaged and using `permission` right now.
-    /// Readers are injectable so the logic stays testable without touching
-    /// real UserDefaults.
+    /// Features that are on and using `permission` right now.
     static func activeFeatures(using permission: AppPermission,
-                               isAvailable: (AppFeature) -> Bool,
-                               boolFor: (String) -> Bool,
-                               stringFor: (String) -> String?,
-                               dataFor: (String) -> Data? = { _ in nil }) -> [AppFeature] {
+                               defaults: UserDefaults = .standard) -> [AppFeature] {
         allCases.filter { feature in
-            guard feature.permissions.contains(permission), isAvailable(feature) else { return false }
-            let keys = feature.enabledKeys
-            guard keys.isEmpty || keys.contains(where: boolFor) else { return false }
+            guard feature.permissions.contains(permission), feature.isOn(in: defaults) else { return false }
             switch (feature, permission) {
             case (.switcher, .screenRecording):
-                return !boolFor(DefaultsKey.switcherSimpleMode)
-            case (.radialMenu, .accessibility):
-                if let profiles = dataFor(DefaultsKey.radialMenuProfiles) {
-                    return RadialMenuSupport.needsAccessibility(RadialMenuSupport.decodeProfiles(profiles))
-                }
-                return RadialMenuSupport.needsAccessibility(
-                    RadialMenuSupport.decode(dataFor(DefaultsKey.radialMenuItems)))
-                    || RadialMenuMouseTrigger.sanitized(
-                        stringFor(DefaultsKey.radialMenuMouseButton)) != .off
-            case (.keepAwake, .accessibility):
-                return boolFor(DefaultsKey.keepAwakeMouseJiggleEnabled)
-            case (.mixer, .accessibility):
-                return boolFor(DefaultsKey.preciseVolumeRollerEnabled)
-            case (.brightness, .accessibility):
-                return boolFor(DefaultsKey.brightnessKeysEnabled)
-                    || boolFor(DefaultsKey.brightnessOSDEnabled)
-                    || BrightnessSupport.KeyStep.sanitized(stringFor(DefaultsKey.brightnessKeyStep)) != .standard
-            case (.monitorCPU, .notifications):
-                return boolFor(DefaultsKey.monitorAlertCPU) || boolFor(DefaultsKey.monitorAlertCPUTemperature)
-            case (.monitorMemory, .notifications):
-                return boolFor(DefaultsKey.monitorAlertMemory)
-            case (.monitorDisk, .notifications):
-                return boolFor(DefaultsKey.monitorAlertDisk)
-            case (.monitorPower, .notifications):
-                return boolFor(DefaultsKey.monitorAlertBattery)
-                    || boolFor(DefaultsKey.monitorAlertBatteryTemperature)
-            case (.appUpdates, .notifications):
-                return AppUpdatesSupport.CheckFrequency
-                    .sanitized(stringFor(DefaultsKey.appUpdatesCheckFrequency)) != .off
-                    && boolFor(DefaultsKey.appUpdatesNotify)
-            case (.cleaner, .filesAndFolders):
-                return boolFor(DefaultsKey.whatsAppDownloadsEnabled)
-            case (.cleaner, .notifications):
-                let cleanerNotifies = (stringFor(DefaultsKey.cleanerScheduleFrequency) ?? "off") != "off"
-                    && boolFor(DefaultsKey.cleanerScheduleNotify)
-                let whatsAppNotifies = boolFor(DefaultsKey.whatsAppDownloadsEnabled)
-                    && (boolFor(DefaultsKey.whatsAppDownloadsAutomaticEnabled)
-                        || boolFor(DefaultsKey.whatsAppOrganizerEnabled))
-                    && boolFor(DefaultsKey.whatsAppDownloadsNotify)
-                return cleanerNotifies || whatsAppNotifies
+                return !defaults.bool(forKey: DefaultsKey.switcherSimpleMode)
             case (.screenRecorder, .audioCapture):
-                return boolFor(DefaultsKey.recorderSystemAudio)
+                return defaults.bool(forKey: DefaultsKey.recorderSystemAudio)
             case (.screenRecorder, .microphone):
-                return boolFor(DefaultsKey.recorderMicrophone)
+                return defaults.bool(forKey: DefaultsKey.recorderMicrophone)
             default:
                 return true
             }
         }
-    }
-
-    /// Monitor alert keys and the metric feature each one belongs to. An
-    /// alert only counts while its metric is available in the hub.
-    static let monitorAlertPairs: [(key: String, feature: AppFeature)] = [
-        (DefaultsKey.monitorAlertCPU, .monitorCPU),
-        (DefaultsKey.monitorAlertCPUTemperature, .monitorCPU),
-        (DefaultsKey.monitorAlertBatteryTemperature, .monitorPower),
-        (DefaultsKey.monitorAlertMemory, .monitorMemory),
-        (DefaultsKey.monitorAlertDisk, .monitorDisk),
-        (DefaultsKey.monitorAlertBattery, .monitorPower),
-    ]
-
-    static func anyMonitorAlertEnabled(isAvailable: (AppFeature) -> Bool,
-                                       boolFor: (String) -> Bool) -> Bool {
-        monitorAlertPairs.contains { boolFor($0.key) && isAvailable($0.feature) }
-    }
-
-    /// Runtime convenience over the injectable core.
-    static func activeFeatures(using permission: AppPermission,
-                               defaults: UserDefaults = .standard) -> [AppFeature] {
-        activeFeatures(using: permission,
-                       isAvailable: { defaults.bool(forKey: $0.availabilityKey) },
-                       boolFor: { defaults.bool(forKey: $0) },
-                       stringFor: { defaults.string(forKey: $0) },
-                       dataFor: { defaults.data(forKey: $0) })
     }
 }
 
@@ -532,14 +141,9 @@ extension AppPermission {
         switch self {
         case .accessibility: return "accessibility"
         case .screenRecording: return "rectangle.dashed.badge.record"
-        case .fullDiskAccess: return "externaldrive.badge.person.crop"
-        case .filesAndFolders: return "folder.badge.person.crop"
-        case .notifications: return "bell.badge"
         case .automationFinder: return "gearshape.2"
         case .audioCapture: return "waveform"
         case .microphone: return "mic"
-        case .camera: return "camera"
-        case .appManagement: return "app.badge"
         }
     }
 }

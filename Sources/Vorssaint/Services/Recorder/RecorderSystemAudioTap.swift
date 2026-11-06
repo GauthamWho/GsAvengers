@@ -136,8 +136,6 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
     private var processListenerClient: UnsafeMutableRawPointer?
     private var stopped = false
     /// What the mixdown took from the sound, given back to every sample.
-    private let levelCompensation = AtomicFloatBox(1)
-    private var levelWatch: LevelCompensationWatch?
 
     /// Destroying a device or a tap can park inside a broken audio path, so
     /// it never happens on a queue anything waits for. Serial, so the device
@@ -213,7 +211,6 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
         let tapID = stopped ? 0 : self.tapID
         let aggregateID = self.aggregateID
         let ioProc = self.ioProc
-        levelWatch?.stop()
         Self.removeListener(deviceListenerClient, from: AudioObjectID(kAudioObjectSystemObject),
                             kAudioHardwarePropertyDefaultOutputDevice)
         Self.removeListener(processListenerClient, from: AudioObjectID(kAudioObjectSystemObject),
@@ -239,7 +236,6 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
                     if !awaitingApp {
                         // Read before the first cycle, so the head of the
                         // file already has its level.
-                        followProcesses()
                         buildPipeline()
                     }
                     watchDefaultOutputDevice()
@@ -263,8 +259,6 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
                 Self.removeListener(processListenerClient, from: AudioObjectID(kAudioObjectSystemObject),
                                     kAudioHardwarePropertyProcessObjectList)
                 processListenerClient = nil
-                levelWatch?.stop()
-                levelWatch = nil
                 teardownPipeline()
                 Self.destroy(aggregateID: 0, ioProc: nil, tapID: tapID)
                 continuation.resume()
@@ -306,9 +300,6 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
         let channels = tapChannels
         let heard = self.heard
         let onSample = self.onSample
-        let compensation = levelCompensation
-        let ramp = TapLevelRamp()
-        let limiter = LimiterState(release: BoostLimiter.release(sampleRate: sampleRate))
         let timescale = CMTimeScale(sampleRate.rounded())
         let hostClock = CMClockGetHostTimeClock()
         var ioProc: AudioDeviceIOProcID?
@@ -331,19 +322,6 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
                   let sample = Self.sampleBuffer(from: buffer, format: format,
                                                  timescale: timescale, time: time)
             else { return }
-            // Eased as in the mixer, so a change never steps the level.
-            let gain = ramp.next(toward: compensation.value, hostTime: now.pointee.mHostTime)
-            if gain > 1 {
-                Self.withSamples(of: sample) { samples, count in
-                    RecorderSupport.restoreTapLevel(samples, count: count, channels: channels,
-                                                    gain: gain, limiter: &limiter.limiter,
-                                                    release: limiter.release)
-                }
-            } else {
-                // Peaks held from an earlier stretch must not turn down the
-                // next one, which starts from the sound it brings.
-                limiter.limiter = BoostLimiter()
-            }
             onSample(sample)
         }
         guard created == noErr, let ioProc,
@@ -406,7 +384,6 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
             guard !current.isEmpty, clock != nil else { return }
             awaitingApp = false
             if buildTap(around: current) {
-                followProcesses()
                 buildPipeline()
             }
             if aggregateID == 0 { onReaderLost?() }
@@ -418,10 +395,7 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
         Self.destroy(aggregateID: 0, ioProc: nil, tapID: tapID)
         // The HAL may hand this ID to another tap from here on.
         tapID = 0
-        levelWatch?.stop()
-        levelWatch = nil
         if buildTap(around: current) {
-            followProcesses()
             buildPipeline()
         }
         if aggregateID == 0 { onReaderLost?() }
@@ -497,33 +471,6 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
     /// hears play: every other one for the whole Mac, the app's own for an
     /// app's tap.
     ///
-    /// The stereo mixdown divides what a process plays on an output with more
-    /// than two channels by that output's channel pairs, a known system issue
-    /// (FB13479345), so a recording made with a TV over HDMI or an audio
-    /// interface as the output came out at a half or a quarter of its level.
-    /// The mix holds every process wherever it plays (measured 2026-10-07:
-    /// two apps on two outputs, neither of them the default, both reached it
-    /// whole), so the correction is read from all of them, and the narrowest
-    /// output decides, as in the mixer: no process is ever recorded louder
-    /// than it plays. One gain cannot suit outputs of different widths at
-    /// once, so while an app holds a narrower output, the rest keeps the
-    /// level it had before this correction. The watch follows processes that
-    /// come or go, since a video started during the recording can play
-    /// through one the first read never saw.
-    private func followProcesses() {
-        guard !stopped, levelWatch == nil else { return }
-        let compensation = levelCompensation
-        let store: (Float) -> Void = { compensation.value = $0 }
-        // An app's tap is read like one of the mixer's, from its own processes.
-        let watch = pid == nil
-            ? LevelCompensationWatch.started(everyProcessExcept: [ownProcess], store: store)
-            : LevelCompensationWatch.started(objects: tapped, store: store)
-        // Briefly, as the mixer's engines do, so the head of the file
-        // already has its level.
-        watch.waitForFirstRead()
-        levelWatch = watch
-    }
-
     private static func destroy(aggregateID: AudioObjectID,
                                 ioProc: AudioDeviceIOProcID?,
                                 tapID: AudioObjectID) {
@@ -542,31 +489,6 @@ final class RecorderSystemAudioTap: @unchecked Sendable {
     }
 
     // MARK: - Samples
-
-    /// The limiter's memory, touched only on the audio thread.
-    private final class LimiterState {
-        var limiter = BoostLimiter()
-        let release: Float
-
-        init(release: Float) {
-            self.release = release
-        }
-    }
-
-    /// The samples a buffer just made holds, to change in place before anyone
-    /// else sees them.
-    private static func withSamples(of sampleBuffer: CMSampleBuffer,
-                                    _ body: (UnsafeMutablePointer<Float>, Int) -> Void) {
-        guard let block = CMSampleBufferGetDataBuffer(sampleBuffer) else { return }
-        var length = 0
-        var data: UnsafeMutablePointer<CChar>?
-        guard CMBlockBufferGetDataPointer(block, atOffset: 0, lengthAtOffsetOut: &length,
-                                          totalLengthOut: nil,
-                                          dataPointerOut: &data) == kCMBlockBufferNoErr,
-              let data else { return }
-        let count = length / MemoryLayout<Float>.size
-        data.withMemoryRebound(to: Float.self, capacity: count) { body($0, count) }
-    }
 
     private static func format(sampleRate: Double, channels: Int) -> CMAudioFormatDescription? {
         guard sampleRate > 0, channels > 0 else { return nil }

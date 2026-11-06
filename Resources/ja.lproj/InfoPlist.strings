@@ -1,23 +1,11 @@
 /* macOS Automation permission prompt. */
-"NSAppleEventsUsageDescription" = "G’s Macは、ファイルの移動、項目をゴミ箱に入れる操作、要求されたコマンドの実行、お使いのメディアアプリの再生操作にオートメーションを使用します。";
+"NSAppleEventsUsageDescription" = "G’s Avengers は、カットしてペーストしたファイルを移動するために Finder に依頼します。";
 
 /* macOS Screen & System Audio Recording permission prompt. */
-"NSAudioCaptureUsageDescription" = "G’s Macは、ミキサーで各アプリの音量を調整するため、また開始した画面収録にMacの音声を含めるために、各アプリの音声を使用します。Macの外に送信されることはありません。";
-
-/* macOS Bluetooth permission prompt. */
-"NSBluetoothAlwaysUsageDescription" = "G’s Macは、接続済み周辺機器のバッテリー残量を読み取るためだけにBluetoothを使用します。データがMacの外に送信されることはありません。";
+"NSAudioCaptureUsageDescription" = "G’s Avengers は、オンにしたときだけ、開始した画面収録に Mac のサウンドを含めます。Mac の外には何も送られません。";
 
 /* macOS Microphone permission prompt. */
-"NSMicrophoneUsageDescription" = "G’s Macは、画面収録でマイクをオンにしたときだけ音声を収録します。一時リンクを作成しない限り、音声はMac上に保存されます。";
+"NSMicrophoneUsageDescription" = "G’s Avengers は、画面収録でオンにしたときだけマイクを録音します。";
 
-/* macOS Camera permission prompt. */
-"NSCameraUsageDescription" = "G’s Macは、開いたプレビューウインドウにのみカメラを表示し、通話前に自分の映りを確認できるようにします。何も録画されず、Macの外に送信されることもありません。";
-
-/* macOS Downloads folder permission prompt. */
-"NSDownloadsFolderUsageDescription" = "G’s Macは、ダウンロード内のローカルメタデータを確認し、選択した確認済みWhatsAppファイルだけを確認、整理、またはゴミ箱へ移動します。スクリーンショットをここに保存している場合、クリーンアップは忘れられたスクリーンショットも探します。";
-
-/* macOS user-selected organizer destination prompts. */
-"NSDesktopFolderUsageDescription" = "G’s Macは、確認済みのWhatsAppダウンロードを、明示的に選択した保存先フォルダに整理します。スクリーンショットをここに保存している場合、クリーンアップは忘れられたスクリーンショットも探します。";
-"NSDocumentsFolderUsageDescription" = "G’s Macは、確認済みのWhatsAppダウンロードを、明示的に選択した保存先フォルダに整理します。スクリーンショットをここに保存している場合、クリーンアップは忘れられたスクリーンショットも探します。";
-"NSNetworkVolumesUsageDescription" = "G’s Macは、確認済みのWhatsAppダウンロードを、明示的に選択した保存先フォルダに整理します。スクリーンショットをここに保存している場合、クリーンアップは忘れられたスクリーンショットも探します。";
-"NSRemovableVolumesUsageDescription" = "G’s Macは、確認済みのWhatsAppダウンロードを、明示的に選択した保存先フォルダに整理します。スクリーンショットをここに保存している場合、クリーンアップは忘れられたスクリーンショットも探します。";
+/* macOS Local Network permission prompt (Windows keyboard & mouse sharing). */
+"NSLocalNetworkUsageDescription" = "G’s Avengers は、1 つのキーボードとマウスを両方で使えるよう、自宅の Wi-Fi 上の Windows ノートを見つけます。";

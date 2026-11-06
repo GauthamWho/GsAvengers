@@ -34,7 +34,6 @@ final class AppSwitcher: ObservableObject {
     @Published private(set) var selectedIndex = 0 {
         didSet {
             guard oldValue != selectedIndex else { return }
-            cancelLetterConfirmation()
             updateIconRowLayoutForCurrentSelection()
             revealSelectedIconInVisibleRow()
             if sessionActive, simpleModeEnabled, !usesWindowRow {
@@ -61,7 +60,59 @@ final class AppSwitcher: ObservableObject {
     /// Written only on the main thread.
     private var sessionActive: Bool {
         get { routeLock.withLock { routeSessionActive } }
-        set { routeLock.withLock { routeSessionActive = newValue } }
+        set {
+            let changed = routeLock.withLock { () -> Bool in
+                defer { routeSessionActive = newValue }
+                return routeSessionActive != newValue
+            }
+            if changed { setPointerTap(newValue) }
+        }
+    }
+
+    /// The session-only tap for clicks and the wheel, made and removed on the
+    /// switcher's own input thread. Only while the panel is open.
+    private var pointerTap: CFMachPort?
+    private var pointerTapSource: CFRunLoopSource?
+
+    private func setPointerTap(_ on: Bool) {
+        guard let runLoop = lifecycleLock.withLock({ tapRunLoop }) else { return }
+        CFRunLoopPerformBlock(runLoop, CFRunLoopMode.commonModes.rawValue) { [weak self] in
+            guard let self else { return }
+            let current = CFRunLoopGetCurrent()
+            if on {
+                guard self.pointerTap == nil else { return }
+                let mask = CGEventMask(1 << CGEventType.leftMouseDown.rawValue)
+                    | CGEventMask(1 << CGEventType.rightMouseDown.rawValue)
+                    | CGEventMask(1 << CGEventType.otherMouseDown.rawValue)
+                    | CGEventMask(1 << CGEventType.otherMouseUp.rawValue)
+                    | CGEventMask(1 << CGEventType.scrollWheel.rawValue)
+                guard let tap = CGEvent.tapCreate(
+                    tap: .cgSessionEventTap, place: .headInsertEventTap, options: .defaultTap,
+                    eventsOfInterest: mask,
+                    callback: { _, type, event, userInfo in
+                        guard let userInfo else { return Unmanaged.passUnretained(event) }
+                        let switcher = Unmanaged<AppSwitcher>.fromOpaque(userInfo).takeUnretainedValue()
+                        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                            if let tap = switcher.pointerTap { CGEvent.tapEnable(tap: tap, enable: true) }
+                            return Unmanaged.passUnretained(event)
+                        }
+                        return switcher.route(type: type, event: event)
+                    },
+                    userInfo: Unmanaged.passUnretained(self).toOpaque()),
+                      let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0) else { return }
+                CFRunLoopAddSource(current, source, .commonModes)
+                CGEvent.tapEnable(tap: tap, enable: true)
+                self.pointerTap = tap
+                self.pointerTapSource = source
+            } else {
+                if let tap = self.pointerTap { CGEvent.tapEnable(tap: tap, enable: false) }
+                if let source = self.pointerTapSource { CFRunLoopRemoveSource(current, source, .commonModes) }
+                if let tap = self.pointerTap { CFMachPortInvalidate(tap) }
+                self.pointerTap = nil
+                self.pointerTapSource = nil
+            }
+        }
+        CFRunLoopWakeUp(runLoop)
     }
 
     /// Other keyboard filters must yield during enumeration as well as an
@@ -148,14 +199,6 @@ final class AppSwitcher: ObservableObject {
     /// a middle click on panel chrome can never close an unrelated window.
     private var hoveredWindowIndex: Int?
     private var scrollNavigation = SwitcherScrollNavigation()
-    /// A protected Q or W waiting for its second press. Tied to the item that
-    /// was selected when it started, so moving on never confirms by surprise.
-    private struct PendingLetterConfirmation {
-        let action: SwitcherLetterAction
-        let itemID: String
-        let expiry: DispatchWorkItem
-    }
-    private var pendingLetterConfirmation: PendingLetterConfirmation?
     private var swallowingMiddleMouseUp = false
     /// Fires while the pointer stays on the last visible overflow icon.
     private var iconRowEdgeHoverWork: DispatchWorkItem?
@@ -428,13 +471,12 @@ final class AppSwitcher: ObservableObject {
                 return
             }
 
+            // At rest the switcher hears only the keyboard. Clicks and the
+            // wheel reach it through a second tap that exists only while its
+            // panel is open (see setPointerTap), so ordinary pointer use never
+            // passes through this app.
             let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
                 | CGEventMask(1 << CGEventType.flagsChanged.rawValue)
-                | CGEventMask(1 << CGEventType.leftMouseDown.rawValue)
-                | CGEventMask(1 << CGEventType.rightMouseDown.rawValue)
-                | CGEventMask(1 << CGEventType.otherMouseDown.rawValue)
-                | CGEventMask(1 << CGEventType.otherMouseUp.rawValue)
-                | CGEventMask(1 << CGEventType.scrollWheel.rawValue)
             guard let tap = CGEvent.tapCreate(
                 tap: .cgSessionEventTap,
                 place: .headInsertEventTap,
@@ -931,15 +973,7 @@ final class AppSwitcher: ObservableObject {
         switch type {
         case .scrollWheel:
             guard sessionActive else { return Unmanaged.passUnretained(event) }
-            // A remote screen's scroll comes already turned the controlling
-            // computer's way, so Scroll Direction is for local wheels only.
-            let direction = ScrollDirectionPreferences(defaults: .standard)
-            let directionApplies = direction.isEnabled
-                && ScrollWheelHIDStage.shared.passed(event)
-                && !MouseAppExceptions.shared.excludesPointerTarget(
-                    .scrollDirection, at: event.location,
-                    sourceProcessID: event.getIntegerValueField(.eventSourceUnixProcessID))
-            let delta = scrollNavigation.selectionDelta(for: event, direction: directionApplies ? direction : nil)
+            let delta = scrollNavigation.selectionDelta(for: event)
             if delta != 0 {
                 // Moving the row must not select the card under a stationary pointer.
                 hoverAnchor = NSEvent.mouseLocation
@@ -1087,7 +1121,7 @@ final class AppSwitcher: ObservableObject {
                 // through the list closing or quitting everything on the way.
                 if event.getIntegerValueField(.keyboardEventAutorepeat) == 0 {
                     switch action {
-                    case .closeWindow, .quitApp: runProtectedLetterAction(action)
+                    case .closeWindow, .quitApp: performLetterAction(action)
                     case .pinSearch: pinSearch()
                     }
                 }
@@ -1583,53 +1617,12 @@ final class AppSwitcher: ObservableObject {
                                                                           delta: delta)
     }
 
-    /// W and Q act on the selected item, which quit protection's own tap cannot
-    /// see: it yields the keyboard for the whole session. Ask for the second
-    /// press here instead, so turning the protection on still means something
-    /// where a single letter closes a window the user is not looking at.
-    private func runProtectedLetterAction(_ action: SwitcherLetterAction) {
-        guard windows.indices.contains(selectedIndex) else { return }
-        let item = windows[selectedIndex]
-        let shortcut: QuitProtectionShortcut = action == .quitApp ? .quit : .close
-        guard let confirmation = QuitProtectionService.shared.selectionConfirmation(
-            for: shortcut,
-            bundleIdentifier: NSRunningApplication(processIdentifier: item.pid)?.bundleIdentifier
-        ) else {
-            performLetterAction(action)
-            return
-        }
-
-        let pending = pendingLetterConfirmation
-        cancelLetterConfirmation()
-        if let pending, pending.action == action, pending.itemID == item.id {
-            performLetterAction(action)
-            return
-        }
-
-        let expiry = DispatchWorkItem { [weak self] in self?.cancelLetterConfirmation() }
-        pendingLetterConfirmation = PendingLetterConfirmation(action: action,
-                                                             itemID: item.id,
-                                                             expiry: expiry)
-        if confirmation.showsFeedback {
-            QuitProtectionService.shared.showSelectionHUD(for: shortcut, on: placementScreen)
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + confirmation.intervalMilliseconds / 1_000,
-                                      execute: expiry)
-    }
-
     private func performLetterAction(_ action: SwitcherLetterAction) {
         switch action {
         case .closeWindow: closeSelectedWindow()
         case .quitApp: quitSelectedApp()
         case .pinSearch: break
         }
-    }
-
-    private func cancelLetterConfirmation() {
-        guard let pending = pendingLetterConfirmation else { return }
-        pending.expiry.cancel()
-        pendingLetterConfirmation = nil
-        QuitProtectionService.shared.hideSelectionHUD()
     }
 
     /// Closes the highlighted window (⌘Tab → W) and keeps the session open, so
@@ -1887,7 +1880,6 @@ final class AppSwitcher: ObservableObject {
 
     private func endSession() {
         stopObservingTermination()
-        cancelLetterConfirmation()
         SwitcherAppIconCache.endSession()
         sessionActive = false
         invalidateSecureInputReplays()

@@ -120,13 +120,12 @@ enum LaunchAtLogin {
         }
     }
 
+    /// A copy run from a disk image or a translocated download would register
+    /// a login item that points at a path that goes away.
     private static var locationIsUnstable: Bool {
-        UpdateInstallerSupport.runsFromImmutableLocation(
-            appPath: Bundle.main.bundlePath,
-            volumeIsReadOnly: { path in
-                let values = try? URL(fileURLWithPath: path)
-                    .resourceValues(forKeys: [.volumeIsReadOnlyKey])
-                return values?.volumeIsReadOnly ?? true
-            })
+        let path = Bundle.main.bundlePath
+        if path.contains("/AppTranslocation/") { return true }
+        let values = try? URL(fileURLWithPath: path).resourceValues(forKeys: [.volumeIsReadOnlyKey])
+        return values?.volumeIsReadOnly ?? true
     }
 }

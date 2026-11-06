@@ -57,18 +57,9 @@ else
     APP_OPTIMIZATION_FLAGS=(-O)
     BUILD_CONFIGURATION="release"
 fi
-FAN_HELPER_ID="$APP_BUNDLE_ID.fan-control"
-# G’s Avengers ships two helper apps inside the main bundle: clipboard history
-# (Modules/GsClipboard) and mouse & keyboard sharing (Modules/GsShare/mac).
-# The main app starts them and quits them; they have no Dock icon of their own.
-CLIPBOARD_HELPER_ID="$APP_BUNDLE_ID.clipboard"
-SHARE_HELPER_ID="$APP_BUNDLE_ID.share"
-CLIPBOARD_HELPER_APP="G’s Avengers Clipboard.app"
-SHARE_HELPER_APP="G’s Avengers Sharing.app"
-# Now Playing is read through /usr/bin/perl loading this library; see
-# Sources/NowPlayingAdapter. Staged under Contents/Frameworks, signed on its own.
-NOW_PLAYING_ADAPTER_ID="$APP_BUNDLE_ID.now-playing"
-NOW_PLAYING_ADAPTER="libVorssaintNowPlaying.dylib"
+# One process: clipboard history and Windows sharing are compiled into the
+# app itself (Sources/Vorssaint/Clipboard, Sources/Vorssaint/Sharing). There
+# are no helper apps, login items, daemons or extra libraries in the bundle.
 TARGET="arm64-apple-macosx14.0"
 ENTITLEMENTS="Resources/Vorssaint.entitlements"
 LEGACY_IDENTITY="GsMac Signing"
@@ -158,46 +149,20 @@ write_swift_output_file_map() {
 
 finalize_installed_bundle_after_child() {
     local bundle="$1"
-    local helper="$bundle/Contents/Library/LaunchServices/$FAN_HELPER_ID"
-    local adapter="$bundle/Contents/Frameworks/$NOW_PLAYING_ADAPTER"
     local devid
     devid="$(developer_id_identity)"
 
     echo "▸ Finalizing installed signature…"
     sleep 3
-    local app
-    for app in "$bundle"/Contents/Library/LoginItems/*.app(N); do
-        if [[ -n "$devid" ]]; then
-            codesign_with_timestamp_retry --force --strip-disallowed-xattrs --options runtime --timestamp \
-                --sign "$devid" "$app"
-        elif legacy_identity_installed; then
-            /usr/bin/codesign --force --strip-disallowed-xattrs --sign "$LEGACY_IDENTITY" "$app"
-        else
-            /usr/bin/codesign --force --strip-disallowed-xattrs --sign - "$app"
-        fi
-    done
     if [[ -n "$devid" ]]; then
-        [[ -f "$helper" ]] && codesign_with_timestamp_retry --force --strip-disallowed-xattrs \
-            --options runtime --timestamp --identifier "$FAN_HELPER_ID" --sign "$devid" "$helper"
-        [[ -f "$adapter" ]] && codesign_with_timestamp_retry --force --strip-disallowed-xattrs \
-            --options runtime --timestamp --identifier "$NOW_PLAYING_ADAPTER_ID" --sign "$devid" "$adapter"
         codesign_with_timestamp_retry --force --strip-disallowed-xattrs --options runtime --timestamp \
             --entitlements "$ENTITLEMENTS" --sign "$devid" "$bundle"
     elif legacy_identity_installed; then
-        [[ -f "$helper" ]] && /usr/bin/codesign --force --strip-disallowed-xattrs \
-            --identifier "$FAN_HELPER_ID" --sign "$LEGACY_IDENTITY" "$helper"
-        [[ -f "$adapter" ]] && /usr/bin/codesign --force --strip-disallowed-xattrs \
-            --identifier "$NOW_PLAYING_ADAPTER_ID" --sign "$LEGACY_IDENTITY" "$adapter"
-        /usr/bin/codesign --force --strip-disallowed-xattrs --sign "$LEGACY_IDENTITY" "$bundle"
+        /usr/bin/codesign --force --strip-disallowed-xattrs \
+            --sign "$LEGACY_IDENTITY" "$bundle"
     else
-        [[ -f "$helper" ]] && /usr/bin/codesign --force --strip-disallowed-xattrs \
-            --identifier "$FAN_HELPER_ID" --sign - "$helper"
-        [[ -f "$adapter" ]] && /usr/bin/codesign --force --strip-disallowed-xattrs \
-            --identifier "$NOW_PLAYING_ADAPTER_ID" --sign - "$adapter"
         /usr/bin/codesign --force --strip-disallowed-xattrs --sign - "$bundle"
     fi
-    [[ -f "$helper" ]] && /usr/bin/codesign --verify --strict "$helper"
-    [[ -f "$adapter" ]] && /usr/bin/codesign --verify --strict "$adapter"
     /usr/bin/codesign --verify --deep --strict "$bundle"
     echo "✓ Signature ready: $bundle"
 }
@@ -264,69 +229,31 @@ discard_test_preferences() {
 # Standalone automated tests: pure contracts plus isolated disk, subprocess,
 # keyboard-data and media fixtures. No application windows or device capture.
 if (( TEST )); then
+    rm -rf build/generated-tests
     python3 Tests/generate_sources.py
     TEST_OBJECT_DIR="build/objects/tests"
     mkdir -p "$TEST_OBJECT_DIR"
     TEST_SOURCES=(
-        Sources/Vorssaint/Services/Media/MediaSupport.swift
-        Sources/Vorssaint/Core/QuitProtectionSupport.swift
-        Sources/Vorssaint/Core/QuitProtectionStrings.swift
         Sources/Vorssaint/Core/Defaults.swift
-        Sources/Vorssaint/Services/LegacyZoomCleanup.swift
-        Sources/Vorssaint/Services/QuickTools/CameraPreviewSupport.swift
         Sources/Vorssaint/Core/QuickRingStrings.swift
         Sources/Vorssaint/Core/SharedUIStrings.swift
-        Sources/Vorssaint/UI/PlainTextLineMover.swift
         Sources/Vorssaint/UI/SliderScrollArea.swift
         Sources/Vorssaint/Services/QuickRing/QuickRingSupport.swift
         Sources/Vorssaint/Core/GsMacEssentials.swift
         Sources/Vorssaint/UI/WindowVisibilityReader.swift
         Sources/Vorssaint/Core/FeatureCatalog.swift
-        Sources/Vorssaint/Core/FeaturePresets.swift
-        Sources/Vorssaint/Core/FeatureHubStrings.swift
-        Sources/Vorssaint/Core/MixerScreenSharingStrings.swift
         Sources/Vorssaint/Core/ShortcutSettingsStrings.swift
         Sources/Vorssaint/Core/SwitcherShortcutStrings.swift
-        Sources/Vorssaint/Core/SettingsBackupSupport.swift
-        Sources/Vorssaint/Core/BackupStrings.swift
-        Sources/Vorssaint/Core/SnippetStrings.swift
-        Sources/Vorssaint/Core/AlertSoundStrings.swift
-        Sources/Vorssaint/Core/BrightnessStrings.swift
-        Sources/Vorssaint/Core/MediaImageStrings.swift
-        Sources/Vorssaint/Core/QuickToggleStrings.swift
         Sources/Vorssaint/Core/ScreenshotStrings.swift
         Sources/Vorssaint/Core/RecentCaptureStrings.swift
         Sources/Vorssaint/Core/RecorderStrings.swift
         Sources/Vorssaint/Core/RecorderShareStrings.swift
-        Sources/Vorssaint/Core/CameraPreviewStrings.swift
-        Sources/Vorssaint/Core/WallpaperStrings.swift
-        Sources/Vorssaint/Services/Wallpaper/WallpaperSupport.swift
-        Sources/Vorssaint/UI/MenuPanel/WallpaperThumbnailView.swift
-        Sources/Vorssaint/Core/ScratchpadStrings.swift
-        Sources/Vorssaint/Core/FinderRenameStrings.swift
-        Sources/Vorssaint/Core/CommandBarStrings.swift
-        Sources/Vorssaint/Core/FeedbackStrings.swift
-        Sources/Vorssaint/Core/RadialMenuStrings.swift
         Sources/Vorssaint/Core/MenuBarAppearanceStrings.swift
         Sources/Vorssaint/Core/AppAppearance.swift
         Sources/Vorssaint/Core/AppearanceStrings.swift
         Sources/Vorssaint/Core/GeneralSettingsStrings.swift
         Sources/Vorssaint/Core/SettingsPageStrings.swift
-        Sources/Vorssaint/Core/BatteryTimeStrings.swift
-        Sources/Vorssaint/Core/CPUCoreStrings.swift
-        Sources/Vorssaint/Core/MonitorLayoutStrings.swift
         Sources/Vorssaint/Core/KeepAwakeStrings.swift
-        Sources/Vorssaint/Core/BluetoothSleepStrings.swift
-        Sources/Vorssaint/Core/PermissionGuideStrings.swift
-        Sources/Vorssaint/Core/FanControlStrings.swift
-        Sources/Vorssaint/Core/ConnectedDevicesStrings.swift
-        Sources/Vorssaint/Services/FanControl/FanControlSupport.swift
-        Sources/Vorssaint/Services/FanControl/FanControlResumeSupport.swift
-        Sources/Vorssaint/Services/Snippets/TextSnippetSupport.swift
-        Sources/Vorssaint/Services/RadialMenu/RadialMenuSupport.swift
-        Sources/Vorssaint/Services/QuickTools/ScratchpadSupport.swift
-        Sources/Vorssaint/Services/QuickTools/ScratchpadStore.swift
-        Sources/Vorssaint/Services/KillProcess/KillProcessSupport.swift
         Sources/Vorssaint/Services/Recorder/RecorderSupport.swift
         Sources/Vorssaint/Services/Recorder/RecorderSampleTiming.swift
         Sources/Vorssaint/Services/Recorder/RecorderWriter.swift
@@ -361,126 +288,39 @@ if (( TEST )); then
         Sources/Vorssaint/Core/Localization.swift
         Sources/Vorssaint/Core/Localizations/Strings+*.swift
         Sources/Vorssaint/Core/FeatureStrings.swift
-        Sources/Vorssaint/Core/KillProcessStrings.swift
-        Sources/Vorssaint/Core/PortManagerStrings.swift
-        Sources/Vorssaint/Core/WhatsAppDownloadStrings.swift
-        Sources/Vorssaint/Core/WhatsAppOrganizerStrings.swift
-        Sources/Vorssaint/Core/ReleaseNotes.swift
-        Sources/Vorssaint/Core/ReleaseDigest.swift
-        Sources/Vorssaint/Core/ReleaseChangeAliases.swift
-        Sources/Vorssaint/Core/WhatsNewStrings.swift
         Sources/Vorssaint/Core/URLCleaning.swift
         Sources/Vorssaint/Services/URLCleanerLinkMetadata.swift
         Sources/Vorssaint/Services/GeneralPasteboardAccess.swift
-        Sources/Vorssaint/Services/Clipboard/ClipboardHistoryWrite.swift
-        Sources/Vorssaint/Services/Audio/AirPlayRouteManager.swift
-        Sources/Vorssaint/Services/Audio/MixerRoutingSupport.swift
-        Sources/Vorssaint/Services/Audio/MusicLaunchSupport.swift
-        Sources/Vorssaint/Services/Bluetooth/BluetoothSleepSupport.swift
-        Sources/Vorssaint/UI/MenuPanel/MixerPercentNativeTextField.swift
-        Sources/Vorssaint/UI/MenuPanel/MixerAppDragSource.swift
-        Sources/Vorssaint/Services/Audio/BoostLimiter.swift
-        Sources/Vorssaint/Services/Audio/MixerRender.swift
-        Sources/Vorssaint/Services/Audio/PreciseVolumeRollerSupport.swift
         Sources/Vorssaint/Services/DockPreview/DockPreviewSupport.swift
         Sources/Vorssaint/Services/DockPreview/DockAutohideHold.swift
-        Sources/Vorssaint/Services/SpacesOrder/SpacesOrderHold.swift
-        Sources/Vorssaint/Services/Homebrew/HomebrewSupport.swift
-        Sources/Vorssaint/Services/Homebrew/HomebrewEnvironment.swift
-        Sources/Vorssaint/Services/AppUpdates/AppUpdatesSupport.swift
-        Sources/Vorssaint/Services/AppUpdates/AppUpdateFeedSupport.swift
-        Sources/Vorssaint/Core/AppUpdateStrings.swift
-        Sources/Vorssaint/Core/DiskImageInstallerStrings.swift
-        Sources/Vorssaint/Services/DiskImageInstaller/DiskImageInstallerSupport.swift
         Sources/Vorssaint/UI/NonModalAlert.swift
-        Sources/Vorssaint/Services/Clipboard/ClipboardHistorySupport.swift
         Sources/Vorssaint/Core/ColorValue.swift
-        Sources/Vorssaint/Services/Clipboard/ClipboardAutoClearSupport.swift
         Sources/Vorssaint/Services/AutoQuit/AutoQuitSupport.swift
         Sources/Vorssaint/Core/AutoQuitDockAppsStrings.swift
-        Sources/Vorssaint/Services/Shelf/ShelfSupport.swift
-        Sources/Vorssaint/Services/Shelf/ShelfFilePromiseTransfer.swift
-        Sources/Vorssaint/Core/ShelfPromiseDeliveryStrings.swift
-        Sources/Vorssaint/Services/Finder/FinderRenameSupport.swift
-        Sources/Vorssaint/Services/Update/UpdateInstallerSupport.swift
-        Sources/Vorssaint/Services/Update/UpdateServiceSupport.swift
         Sources/Vorssaint/Services/InstalledApps.swift
         Sources/Vorssaint/Services/LaunchAtLoginSupport.swift
-        Sources/Vorssaint/UI/Settings/SettingsSearchSupport.swift
-        Sources/Vorssaint/UI/Settings/SettingsSidebarSupport.swift
-        Sources/Vorssaint/UI/Settings/FeatureVisibilitySupport.swift
-        Sources/Vorssaint/UI/Onboarding/WhatsNewSupport.swift
-        Sources/Vorssaint/UI/Settings/SettingsWindow.swift
-        Sources/Vorssaint/Core/SettingsNavigationStrings.swift
-        Sources/Vorssaint/App/MenuBarSpacingSupport.swift
-        Sources/Vorssaint/App/MenuBarAllowanceSupport.swift
-        Sources/Vorssaint/App/ReopenRequestSupport.swift
-        Sources/Vorssaint/App/StatusItemAnchorSupport.swift
-        Sources/Vorssaint/Services/DockClick/DockClickSupport.swift
         Sources/Vorssaint/Services/Finder/CutPasteProgressSupport.swift
         Sources/Vorssaint/Services/Finder/CutPastePrivilegeSupport.swift
         Sources/Vorssaint/Services/Finder/FinderPasteImageSupport.swift
-        Sources/Vorssaint/Services/MiddleClick/MiddleClickSupport.swift
-        Sources/Vorssaint/Services/MouseNavigation/MouseNavigationSupport.swift
-        Sources/Vorssaint/Services/MouseNavigation/MouseNavigationKeys.swift
-        Sources/Vorssaint/Services/MouseButtons/MouseButtonShortcutSupport.swift
-        Sources/Vorssaint/Services/MouseButtons/MouseSpacesGestureSupport.swift
-        Sources/Vorssaint/Services/MouseClickDebounce/MouseClickDebounceSupport.swift
-        Sources/Vorssaint/Services/MouseExceptions/MouseAppExceptionSupport.swift
-        Sources/Vorssaint/Services/MouseExceptions/MouseAppExceptions.swift
         Sources/Vorssaint/Services/WindowServerSupport.swift
-        Sources/Vorssaint/Services/WindowMaximizerSupport.swift
-        Sources/Vorssaint/Core/MouseButtonStrings.swift
-        Sources/Vorssaint/Core/MouseClickDebounceStrings.swift
-        Sources/Vorssaint/Core/MouseExceptionStrings.swift
-        Sources/Vorssaint/Core/ClipboardIgnoredAppsStrings.swift
-        Sources/Vorssaint/Core/ClipboardRetentionStrings.swift
         Sources/Vorssaint/Core/WindowLayoutIgnoredAppsStrings.swift
         Sources/Vorssaint/Services/WindowLayout/WindowLayoutIgnoredApps.swift
         Sources/Vorssaint/Core/WindowPreviewExclusionStrings.swift
-        Sources/Vorssaint/Core/WindowMaximizerExclusionStrings.swift
-        Sources/Vorssaint/Core/DiskExclusionStrings.swift
         Sources/Vorssaint/Core/SwitcherAppRulesStrings.swift
         Sources/Vorssaint/Services/QuickTools/QuickToolsSupport.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarSupport.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarPreferences.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarMath.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarUnits.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarColors.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarEmoji.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarLinks.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarDates.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarRowShortcuts.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarSystemSettingsSupport.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarFileSearchSupport.swift
-        Sources/Vorssaint/Services/CommandBar/CommandBarQueryMemory.swift
-        Sources/Vorssaint/Services/SpotlightNamesSupport.swift
-        Sources/Vorssaint/Services/QuickTools/MicMuteSupport.swift
-        Sources/Vorssaint/Services/QuickTools/QuickTogglesSupport.swift
         Sources/Vorssaint/Services/QuickTools/ScreenshotCapturePolicy.swift
         Sources/Vorssaint/Services/QuickTools/ScreenshotSupport.swift
         Sources/Vorssaint/Services/QuickTools/ScreenshotCanvasSupport.swift
-        Sources/Vorssaint/UI/Settings/ScreenCaptureToolPicker.swift
-        Sources/Vorssaint/UI/Settings/MonitorToken.swift
         Sources/Vorssaint/Services/QuickTools/ScreenshotRenderer.swift
         Sources/Vorssaint/Services/QuickTools/ScreenshotImageLayerRendering.swift
         Sources/Vorssaint/Services/QuickTools/RecentCaptureStore.swift
         Sources/Vorssaint/Services/QuickTools/ScreenshotSharingSupport.swift
         Sources/Vorssaint/Services/QuickTools/WindowActivationPolicy.swift
-        Sources/Vorssaint/Services/KeyboardDebounce/KeyboardDebounceSupport.swift
-        Sources/Vorssaint/Services/SuperKey/SuperKeySupport.swift
-        Sources/Vorssaint/Services/SuperKey/SuperKeyMappingGuard.swift
-        Sources/Vorssaint/Core/SuperKeyStrings.swift
         Sources/Vorssaint/Core/InputSourceSelection.swift
         Sources/Vorssaint/Services/SessionActivity.swift
         Sources/Vorssaint/Services/SessionActivitySupport.swift
         Sources/Vorssaint/Services/EventTimestamp.swift
         Sources/Vorssaint/Services/OwnKeyEvent.swift
-        Sources/Vorssaint/Services/ScrollWheelSupport.swift
-        Sources/Vorssaint/Services/HorizontalWheelScrolling.swift
-        Sources/Vorssaint/Services/SmoothScrollSupport.swift
-        Sources/Vorssaint/Services/MouseAcceleration/MouseAccelerationSupport.swift
-        Sources/Vorssaint/Services/FocusFollowsMouse/FocusFollowsMouseSupport.swift
         Sources/Vorssaint/Services/AssistiveKeyboard.swift
         Sources/Vorssaint/Services/Switcher/SwitcherModels.swift
         Sources/Vorssaint/Services/Switcher/WindowServerCaptureQueue.swift
@@ -488,51 +328,32 @@ if (( TEST )); then
         Sources/Vorssaint/Services/Switcher/SpaceHopSupport.swift
         Sources/Vorssaint/Services/Switcher/WindowUseOrder.swift
         Sources/Vorssaint/Services/Switcher/WindowEnumeratorAccessibilityPrefetch.swift
-        Sources/Vorssaint/Services/Metrics/MetricFormat.swift
-        Sources/Vorssaint/Services/Metrics/VMStatisticsDecoder.swift
         Sources/Vorssaint/Services/KeepAwakeAutomationSupport.swift
         Sources/Vorssaint/Services/SudoersSupport.swift
-        Sources/Vorssaint/Services/Metrics/BatteryTimeSupport.swift
-        Sources/Vorssaint/Services/Metrics/BatteryPowerSupport.swift
         Sources/Vorssaint/Services/BoundedProcessRunner.swift
         Sources/Vorssaint/Services/DetachedProcess.swift
         Sources/Vorssaint/Services/ShellSupport.swift
-        Sources/Vorssaint/Services/PortManager/PortManagerSupport.swift
-        Sources/Vorssaint/Services/Metrics/NetworkProcessSupport.swift
-        Sources/Vorssaint/Services/Metrics/NetworkSampler.swift
-        Sources/Vorssaint/Services/Metrics/NetworkAddressService.swift
-        Sources/Vorssaint/Services/Metrics/SpeedTest.swift
-        Sources/Vorssaint/Services/Metrics/PeripheralBatterySampler.swift
-        Sources/Vorssaint/Services/Metrics/PeripheralBatterySupport.swift
-        Sources/Vorssaint/Services/Metrics/DiskSupport.swift
-        Sources/Vorssaint/Services/Metrics/MonitorSamplingPolicy.swift
-        Sources/Vorssaint/Services/Metrics/USBDeviceSampler.swift
-        Sources/Vorssaint/Services/Metrics/CPUCoreSampler.swift
-        Sources/Vorssaint/Services/Metrics/MaxCapacityProbe.swift
-        Sources/Vorssaint/Services/Metrics/TemperatureSensorSelector.swift
-        Sources/Vorssaint/Services/Metrics/SustainedAlertGate.swift
         Sources/Vorssaint/Services/WindowLayout/WindowLayoutSupport.swift
         Sources/Vorssaint/Services/WindowLayout/WindowStageManagerSupport.swift
         Sources/Vorssaint/Core/WindowStageManagerStrings.swift
-        Sources/Vorssaint/Services/WindowLayout/WindowGestureSupport.swift
         Sources/Vorssaint/Core/WindowDirectionalStrings.swift
-        Sources/Vorssaint/Core/PointerDisplayStrings.swift
-        Sources/Vorssaint/Core/GraphScaleStrings.swift
         Sources/Vorssaint/Core/HelperAppStrings.swift
-        Sources/Vorssaint/Core/HelperWire.swift
-        Sources/Vorssaint/Core/AvengersSwitches.swift
         Sources/Vorssaint/Core/AvengersStrings.swift
-        Sources/Vorssaint/Services/CleaningMode/CleaningUnlockCounter.swift
-        Sources/Vorssaint/Services/CleaningMode/CleaningMouseReleaseGate.swift
-        Sources/Vorssaint/Services/Display/ExtraBrightnessSupport.swift
-        Sources/Vorssaint/Services/Display/BrightnessSupport.swift
         Sources/Vorssaint/Services/Display/LidDimmingSupport.swift
-        Sources/Vorssaint/Services/Cleaner/CleanerSupport.swift
-        Sources/Vorssaint/Services/Cleaner/CleanerPolicy.swift
-        Sources/Vorssaint/Services/Cleaner/CleanerSchedule.swift
-        Sources/Vorssaint/Services/Uninstall/UninstallerSupport.swift
-        Sources/Vorssaint/Services/ManagedDownloads/WhatsAppDownloadSupport.swift
         Sources/Vorssaint/Core/SecureInputSupport.swift
+        Sources/Vorssaint/Core/HomeStrings.swift
+        Sources/Vorssaint/App/LeanMigration.swift
+        Sources/Vorssaint/App/LeanMigrationKeys.swift
+        Sources/Vorssaint/Sharing/KeyMap.swift
+        Sources/Vorssaint/Sharing/KeyRules.swift
+        Sources/Vorssaint/Sharing/Config.swift
+        Sources/Vorssaint/Sharing/Injector.swift
+        Sources/Vorssaint/Sharing/LocalInput.swift
+        Sources/Vorssaint/Services/PointerTapRunLoop.swift
+        Sources/Vorssaint/Services/QuickTools/CaptureSupport.swift
+        Sources/Vorssaint/Services/LaunchAtLogin.swift
+        Sources/Vorssaint/Services/WindowLayout/MouseAppExceptionSupport.swift
+        Sources/Vorssaint/Services/QuickRing/RingEngine.swift
         Tests/*.swift
         build/generated-tests/*.swift
     )
@@ -542,12 +363,11 @@ if (( TEST )); then
     swiftc -Onone -incremental -enable-batch-mode -j "$(sysctl -n hw.logicalcpu)" \
         -module-name VorssaintTests -output-file-map "$TEST_OUTPUT_FILE_MAP" \
         -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" \
-        "${VM_STATISTICS_COMPAT_FLAGS[@]}" "${TEST_SOURCES[@]}" -o build/metrics-tests
+        "${VM_STATISTICS_COMPAT_FLAGS[@]}" "${HID_EVENT_SYSTEM_FLAGS[@]}" "${TEST_SOURCES[@]}" -o build/metrics-tests
     test_status=0
     ./build/metrics-tests "${TEST_ARGS[@]}" || test_status=$?
     if (( ${#TEST_ARGS} == 0 )); then
         ./Tests/PreferenceCleanupTests.sh || test_status=1
-        ./Tests/UninstallSpacesTests.sh || test_status=1
         ./Tests/DeveloperInstallIsolationTests.sh || test_status=1
     fi
     discard_test_preferences || test_status=1
@@ -586,27 +406,6 @@ if (( ! DEV )); then
     strip -x "build/$EXECUTABLE"
 fi
 
-echo "▸ Compiling protected fan helper…"
-swiftc -O -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" "${BUILD_VARIANT_FLAGS[@]}" \
-    Sources/Vorssaint/Services/FanControl/FanControlSupport.swift \
-    Sources/Vorssaint/Services/FanControl/FanControlXPC.swift \
-    Sources/Vorssaint/Services/SystemMonitor/SMCClient.swift \
-    Sources/Vorssaint/Services/Metrics/TemperatureSensorSelector.swift \
-    Sources/Vorssaint/Services/FanControl/FanControlHardware.swift \
-    Sources/FanControlHelper/main.swift \
-    -o "build/$FAN_HELPER_ID"
-"build/$FAN_HELPER_ID" --selftest
-
-echo "▸ Compiling Now Playing adapter…"
-swiftc -O -target "$TARGET" -sdk "$SDK" "${SDK_COMPAT_FLAGS[@]}" -emit-library \
-    -module-name VorssaintNowPlaying \
-    Sources/NowPlayingAdapter/NowPlayingAdapter.swift \
-    Sources/NowPlayingAdapter/NowPlayingQueue.swift \
-    Sources/NowPlayingAdapter/NowPlayingSelection.swift \
-    Sources/NowPlayingAdapter/NowPlayingSource.swift \
-    Sources/NowPlayingAdapter/NowPlayingCommand.swift \
-    -o "build/$NOW_PLAYING_ADAPTER"
-
 echo "▸ Generating app icon…"
 swift Tools/MakeIcon.swift build/AppIcon.iconset
 xattr -c -r build/AppIcon.iconset build/AppIcon.icns build/MenuBarIcon.png build/MenuBarIcon@2x.png build/BrandMark.png 2>/dev/null || true
@@ -641,58 +440,12 @@ if [[ -n "$ADAPTIVE_SKIP" ]]; then
     cp "$ICON_TMP/actool.log" build/actool-failure.log 2>/dev/null || true
     echo "  adaptive icon skipped: $ADAPTIVE_SKIP (Dock falls back to AppIcon.icns)"
 fi
-echo "▸ Compiling helper apps…"
-build_helper_bundle() {
-    local bundle="$1" executable="$2" identifier="$3" name="$4" extra="$5"
-    rm -rf "$bundle"
-    mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources"
-    cat > "$bundle/Contents/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>CFBundleName</key><string>$name</string>
-  <key>CFBundleDisplayName</key><string>$name</string>
-  <key>CFBundleIdentifier</key><string>$identifier</string>
-  <key>CFBundleExecutable</key><string>$executable</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
-  <key>LSMinimumSystemVersion</key><string>14.0</string>
-  <key>LSUIElement</key><true/>
-  <key>NSHighResolutionCapable</key><true/>
-$extra
-</dict></plist>
-PLIST
-    printf 'APPL????' > "$bundle/Contents/PkgInfo"
-}
-swift build -c release --package-path Modules/GsClipboard --scratch-path build/helpers/clipboard >/dev/null
-CLIPBOARD_BIN="$(swift build -c release --package-path Modules/GsClipboard --scratch-path build/helpers/clipboard --show-bin-path)/GsClipboard"
-build_helper_bundle "build/helpers/$CLIPBOARD_HELPER_APP" GsClipboard "$CLIPBOARD_HELPER_ID" "G’s Avengers Clipboard" ""
-cp "$CLIPBOARD_BIN" "build/helpers/$CLIPBOARD_HELPER_APP/Contents/MacOS/GsClipboard"
-# Its sources belong to the sharing module; their own warnings are reported
-# by that module's build, not here.
-swiftc -O -suppress-warnings -target "$TARGET" -sdk "$SDK" Modules/GsShare/mac/Sources/*.swift -o build/helpers/GsShare
-build_helper_bundle "build/helpers/$SHARE_HELPER_APP" GsShare "$SHARE_HELPER_ID" "G’s Avengers Sharing" \
-    "  <key>NSLocalNetworkUsageDescription</key><string>G’s Avengers finds your Windows laptop on your home Wi-Fi so one keyboard and mouse can work on both.</string>"
-cp build/helpers/GsShare "build/helpers/$SHARE_HELPER_APP/Contents/MacOS/GsShare"
-
 echo "▸ Assembling and signing bundle…"
 STAGE_TMP="$(mktemp -d)"
 STAGE="$STAGE_TMP/$APP_NAME.app"
-mkdir -p "$STAGE/Contents/MacOS" "$STAGE/Contents/Resources" \
-    "$STAGE/Contents/Library/LaunchDaemons" "$STAGE/Contents/Library/LaunchServices"
+mkdir -p "$STAGE/Contents/MacOS" "$STAGE/Contents/Resources"
 cp "build/$EXECUTABLE" "$STAGE/Contents/MacOS/$EXECUTABLE"
-cp "build/$FAN_HELPER_ID" "$STAGE/Contents/Library/LaunchServices/$FAN_HELPER_ID"
-mkdir -p "$STAGE/Contents/Library/LoginItems"
-ditto "build/helpers/$CLIPBOARD_HELPER_APP" "$STAGE/Contents/Library/LoginItems/$CLIPBOARD_HELPER_APP"
-ditto "build/helpers/$SHARE_HELPER_APP" "$STAGE/Contents/Library/LoginItems/$SHARE_HELPER_APP"
-mkdir -p "$STAGE/Contents/Frameworks"
-cp "build/$NOW_PLAYING_ADAPTER" "$STAGE/Contents/Frameworks/$NOW_PLAYING_ADAPTER"
-cp Resources/now-playing.pl "$STAGE/Contents/Resources/now-playing.pl"
-cp Resources/com.gauthamwho.gsmac.fan-control.plist \
-    "$STAGE/Contents/Library/LaunchDaemons/$FAN_HELPER_ID.plist"
 cp Resources/Info.plist "$STAGE/Contents/Info.plist"
-cp CHANGELOG.md "$STAGE/Contents/Resources/CHANGELOG.md"
 for lproj in Resources/*.lproj(N); do
     cp -R "$lproj" "$STAGE/Contents/Resources/"
 done
@@ -703,11 +456,6 @@ if (( DEV )); then
     /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" "$STAGE/Contents/Info.plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $APP_NAME" "$STAGE/Contents/Info.plist"
     /usr/libexec/PlistBuddy -c "Set :CFBundleExecutable $EXECUTABLE" "$STAGE/Contents/Info.plist"
-    FAN_PLIST="$STAGE/Contents/Library/LaunchDaemons/$FAN_HELPER_ID.plist"
-    /usr/libexec/PlistBuddy -c "Set :Label $FAN_HELPER_ID" "$FAN_PLIST"
-    /usr/libexec/PlistBuddy -c "Set :BundleProgram Contents/Library/LaunchServices/$FAN_HELPER_ID" "$FAN_PLIST"
-    /usr/libexec/PlistBuddy -c "Delete :MachServices:com.gauthamwho.gsmac.fan-control" "$FAN_PLIST"
-    /usr/libexec/PlistBuddy -c "Add :MachServices:$FAN_HELPER_ID bool true" "$FAN_PLIST"
     # Stamp the source commit + build time so the running dev app shows (in About)
     # exactly which code it was compiled from. Lets you verify it matches HEAD before
     # testing, instead of unknowingly running a stale build. Dev-only; never shipped.
@@ -716,29 +464,11 @@ if (( DEV )); then
     /usr/libexec/PlistBuddy -c "Add :VorssaintBuildCommit string '$SHA · $(date '+%Y-%m-%d %H:%M')'" "$STAGE/Contents/Info.plist"
     echo "  stamped dev build: $SHA"
 fi
-FAN_HELPER_VERSION="$(
-    export LC_ALL=C
-    /usr/bin/shasum -a 256 \
-        "$STAGE/Contents/Library/LaunchServices/$FAN_HELPER_ID" \
-        "$STAGE/Contents/Library/LaunchDaemons/$FAN_HELPER_ID.plist" \
-        | /usr/bin/awk '{print $1}' | /usr/bin/shasum -a 256 \
-        | /usr/bin/awk '{print $1}'
-)"
-/usr/libexec/PlistBuddy -c "Add :VorssaintFanControlHelperVersion string '$FAN_HELPER_VERSION'" \
-    "$STAGE/Contents/Info.plist"
 printf 'APPL????' > "$STAGE/Contents/PkgInfo"
 cp build/AppIcon.icns "$STAGE/Contents/Resources/AppIcon.icns"
 cp build/MenuBarIcon.png build/MenuBarIcon@2x.png build/BrandMark.png "$STAGE/Contents/Resources/"
 if [[ -f build/Assets.car ]]; then
     cp build/Assets.car "$STAGE/Contents/Resources/Assets.car"
-fi
-if [[ -d Resources/Gifs ]]; then
-    mkdir -p "$STAGE/Contents/Resources/Gifs"
-    cp Resources/Gifs/*.gif "$STAGE/Contents/Resources/Gifs/"
-fi
-if [[ -d Resources/Images ]]; then
-    mkdir -p "$STAGE/Contents/Resources/Images"
-    cp Resources/Images/* "$STAGE/Contents/Resources/Images/"
 fi
 xattr -c -r "$STAGE" 2>/dev/null || true
 
@@ -765,53 +495,9 @@ codesign_app() {
     fi
 }
 
-# The helper apps inside Contents/Library/LoginItems, signed with the same
-# identity as the main app before it is sealed.
-codesign_helper_apps() {
-    local bundle="$1" app
-    for app in "$bundle"/Contents/Library/LoginItems/*.app(N); do
-        if [[ -n "$DEVID" ]]; then
-            codesign_with_timestamp_retry --force --strip-disallowed-xattrs --options runtime --timestamp \
-                --sign "$DEVID" "$app"
-        elif legacy_identity_installed; then
-            codesign --force --strip-disallowed-xattrs --sign "$LEGACY_IDENTITY" "$app"
-        else
-            codesign --force --strip-disallowed-xattrs --sign - "$app"
-        fi
-    done
-}
-
-codesign_fan_helper() {
-    local target="$1"
-    if [[ -n "$DEVID" ]]; then
-        codesign_with_timestamp_retry --force --strip-disallowed-xattrs --options runtime --timestamp \
-            --identifier "$FAN_HELPER_ID" --sign "$DEVID" "$target"
-    elif legacy_identity_installed; then
-        codesign --force --strip-disallowed-xattrs --identifier "$FAN_HELPER_ID" \
-            --sign "$LEGACY_IDENTITY" "$target"
-    else
-        codesign --force --strip-disallowed-xattrs --identifier "$FAN_HELPER_ID" --sign - "$target"
-    fi
-}
-
-codesign_now_playing_adapter() {
-    local target="$1"
-    if [[ -n "$DEVID" ]]; then
-        codesign_with_timestamp_retry --force --strip-disallowed-xattrs --options runtime --timestamp \
-            --identifier "$NOW_PLAYING_ADAPTER_ID" --sign "$DEVID" "$target"
-    elif legacy_identity_installed; then
-        codesign --force --strip-disallowed-xattrs --identifier "$NOW_PLAYING_ADAPTER_ID" \
-            --sign "$LEGACY_IDENTITY" "$target"
-    else
-        codesign --force --strip-disallowed-xattrs --identifier "$NOW_PLAYING_ADAPTER_ID" --sign - "$target"
-    fi
-}
-
 sign_bundle() {
     local bundle="$1"
     local executable="$bundle/Contents/MacOS/$EXECUTABLE"
-    local helper="$bundle/Contents/Library/LaunchServices/$FAN_HELPER_ID"
-    local adapter="$bundle/Contents/Frameworks/$NOW_PLAYING_ADAPTER"
 
     if [[ -n "$DEVID" ]]; then
         echo "  signing with Developer ID (hardened runtime): $DEVID"
@@ -820,9 +506,6 @@ sign_bundle() {
     else
         echo "  signing ad-hoc (no identity installed — run Tools/setup-signing.sh)"
     fi
-    [[ -f "$helper" ]] && codesign_fan_helper "$helper"
-    [[ -f "$adapter" ]] && codesign_now_playing_adapter "$adapter"
-    codesign_helper_apps "$bundle"
     codesign_app "$bundle"
 
     # If local filesystem metadata invalidates the first signature, sign once
@@ -830,14 +513,9 @@ sign_bundle() {
     if ! codesign --verify --deep --strict "$bundle" >/dev/null 2>&1; then
         echo "  re-signing after filesystem metadata settled"
         xattr -c -r "$bundle" 2>/dev/null || true
-        [[ -f "$helper" ]] && codesign_fan_helper "$helper"
-        [[ -f "$adapter" ]] && codesign_now_playing_adapter "$adapter"
-        codesign_helper_apps "$bundle"
         codesign_app "$bundle"
     fi
     [[ -f "$executable" ]] && codesign --verify --strict "$executable"
-    [[ -f "$helper" ]] && codesign --verify --strict "$helper"
-    [[ -f "$adapter" ]] && codesign --verify --strict "$adapter"
     codesign --verify --deep --strict "$bundle"
 }
 

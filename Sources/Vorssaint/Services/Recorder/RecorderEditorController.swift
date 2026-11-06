@@ -903,7 +903,7 @@ final class RecorderEditorModel: ObservableObject, BackdropEditing {
                 RecorderZoomLane.Item(id: $0.id,
                                       start: $0.start,
                                       end: $0.end,
-                                      label: String(format: "%.1f×", locale: MetricFormat.locale,
+                                      label: String(format: "%.1f×", locale: .current,
                                                     $0.amount),
                                       glyph: $0.followsPointer ? "\u{2197}" : "\u{25C9}")
             }

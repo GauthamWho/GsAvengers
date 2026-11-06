@@ -702,111 +702,51 @@ enum ShortcutRecordingCaption {
 
 enum GlobalShortcutRole: CaseIterable, Identifiable {
     case keepAwake
-    case shelf
     case switcher
     case switcherWindow
     case switcherAllWindows
-    case clipboard
-    case soundOutputSwitcher
-    case pastePlain
-    case finderRename
-    case colorPicker
     case screenOCR
-    case micMute
-    case quitAll
-    case quitAllExceptFront
-    case quickLauncher
     case screenshot
     case screenshotFullScreen
     case screenshotLastCapture
     case screenshotUpload
     case recentCaptures
     case screenshotClipboard
-    case cameraPreview
-    case radialMenu
-    case scratchpad
-    case snippetLibrary
-    case commandBar
     case screenRecorder
-    case displayBrightnessDecrease
-    case displayBrightnessIncrease
-    case keyboardBrightnessDecrease
-    case keyboardBrightnessIncrease
-    case pointerNextDisplay
 
     var id: String { storageKey }
 
     var storageKey: String {
         switch self {
         case .keepAwake: return DefaultsKey.keepAwakeShortcut
-        case .shelf: return DefaultsKey.shelfShortcut
         case .switcher: return DefaultsKey.switcherShortcut
         case .switcherWindow: return DefaultsKey.switcherWindowShortcut
         case .switcherAllWindows: return DefaultsKey.switcherAllWindowsShortcut
-        case .clipboard: return DefaultsKey.clipboardHistoryShortcut
-        case .soundOutputSwitcher: return DefaultsKey.soundOutputSwitcherShortcut
-        case .pastePlain: return DefaultsKey.pastePlainShortcut
-        case .finderRename: return DefaultsKey.finderRenameShortcut
-        case .colorPicker: return DefaultsKey.colorPickerShortcut
         case .screenOCR: return DefaultsKey.screenOCRShortcut
-        case .micMute: return DefaultsKey.micMuteShortcut
-        case .quitAll: return DefaultsKey.quitAppsShortcut
-        case .quitAllExceptFront: return DefaultsKey.quitAppsExceptFrontShortcut
-        case .quickLauncher: return DefaultsKey.quickLauncherShortcut
         case .screenshot: return DefaultsKey.screenshotShortcut
         case .screenshotFullScreen: return DefaultsKey.screenshotFullScreenShortcut
         case .screenshotLastCapture: return DefaultsKey.screenshotLastCaptureShortcut
         case .screenshotUpload: return DefaultsKey.screenshotUploadShortcut
         case .recentCaptures: return DefaultsKey.recentCapturesShortcut
         case .screenshotClipboard: return DefaultsKey.screenshotClipboardShortcut
-        case .cameraPreview: return DefaultsKey.cameraPreviewShortcut
-        case .radialMenu: return DefaultsKey.radialMenuShortcut
-        case .scratchpad: return DefaultsKey.scratchpadShortcut
-        case .snippetLibrary: return DefaultsKey.snippetLibraryShortcut
-        case .commandBar: return DefaultsKey.commandBarShortcut
         case .screenRecorder: return DefaultsKey.recorderShortcut
-        case .displayBrightnessDecrease: return DefaultsKey.displayBrightnessDecreaseShortcut
-        case .displayBrightnessIncrease: return DefaultsKey.displayBrightnessIncreaseShortcut
-        case .keyboardBrightnessDecrease: return DefaultsKey.keyboardBrightnessDecreaseShortcut
-        case .keyboardBrightnessIncrease: return DefaultsKey.keyboardBrightnessIncreaseShortcut
-        case .pointerNextDisplay: return DefaultsKey.pointerDisplayShortcut
         }
     }
 
     var defaultShortcut: GlobalShortcut {
         switch self {
         case .keepAwake: return .keepAwakeDefault
-        case .shelf: return .shelfDefault
         case .switcher: return .switcherDefault
         case .switcherWindow: return .switcherWindowDefault
         case .switcherAllWindows: return .switcherAllWindowsDefault
-        case .clipboard: return .clipboardDefault
-        case .soundOutputSwitcher: return .soundOutputSwitcherDefault
-        case .pastePlain: return .pastePlainDefault
-        case .finderRename: return .finderRenameDefault
-        case .colorPicker: return .colorPickerDefault
         case .screenOCR: return .screenOCRDefault
-        case .micMute: return .micMuteDefault
-        case .quitAll: return .quitAllDefault
-        case .quitAllExceptFront: return .quitAllExceptFrontDefault
-        case .quickLauncher: return .quickLauncherDefault
         case .screenshot: return .screenshotDefault
         case .screenshotFullScreen: return .screenshotFullScreenDefault
         case .screenshotLastCapture: return .screenshotLastCaptureDefault
         case .screenshotUpload: return .screenshotUploadDefault
         case .recentCaptures: return .recentCapturesDefault
         case .screenshotClipboard: return .screenshotClipboardDefault
-        case .cameraPreview: return .cameraPreviewDefault
-        case .radialMenu: return .radialMenuDefault
-        case .scratchpad: return .scratchpadDefault
-        case .snippetLibrary: return .snippetLibraryDefault
-        case .commandBar: return .commandBarDefault
         case .screenRecorder: return .screenRecorderDefault
-        case .displayBrightnessDecrease: return .displayBrightnessDecreaseDefault
-        case .displayBrightnessIncrease: return .displayBrightnessIncreaseDefault
-        case .keyboardBrightnessDecrease: return .keyboardBrightnessDecreaseDefault
-        case .keyboardBrightnessIncrease: return .keyboardBrightnessIncreaseDefault
-        case .pointerNextDisplay: return .pointerNextDisplayDefault
         }
     }
 
@@ -834,21 +774,10 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
     func title(_ strings: Strings) -> String {
         switch self {
         case .keepAwake: return strings.keepAwakeTitle
-        case .shelf: return strings.shelfName
         case .switcher: return strings.switcherShortcutHintApps
         case .switcherWindow: return strings.switcherShortcutHintWindows
         case .switcherAllWindows: return FeatureStrings.switcherShortcuts(L10n.shared.language).allWindows
-        case .clipboard: return FeatureStrings.clipboard(L10n.shared.language).title
-        case .soundOutputSwitcher: return strings.soundOutputSwitcherTitle
-        case .pastePlain: return strings.pastePlainName
-        case .finderRename: return FeatureStrings.finderRename(L10n.shared.language).hubTitle
-        case .colorPicker: return strings.colorPickerName
         case .screenOCR: return strings.ocrName
-        case .micMute: return strings.micMuteName
-        case .quitAll: return FeatureStrings.quickToggles(L10n.shared.language).quitAllTitle
-        case .quitAllExceptFront:
-            return FeatureStrings.quickToggles(L10n.shared.language).quitOthersTitle
-        case .quickLauncher: return strings.launcherName
         case .screenshot:
             return FeatureStrings.screenshot(L10n.shared.language).pageTitle
         case .screenshotFullScreen:
@@ -861,21 +790,7 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
             return FeatureStrings.recentCaptures(L10n.shared.language).title
         case .screenshotClipboard:
             return FeatureStrings.screenshot(L10n.shared.language).editClipboardImage
-        case .cameraPreview: return FeatureStrings.cameraPreview(L10n.shared.language).pageTitle
-        case .radialMenu: return FeatureStrings.radialMenu(L10n.shared.language).pageTitle
-        case .scratchpad: return FeatureStrings.scratchpad(L10n.shared.language).pageTitle
-        case .snippetLibrary: return FeatureStrings.snippets(L10n.shared.language).libraryTitle
-        case .commandBar: return FeatureStrings.commandBar(L10n.shared.language).pageTitle
         case .screenRecorder: return FeatureStrings.recorder(L10n.shared.language).pageTitle
-        case .displayBrightnessDecrease:
-            return FeatureStrings.brightness(L10n.shared.language).displayBrightnessDecrease
-        case .displayBrightnessIncrease:
-            return FeatureStrings.brightness(L10n.shared.language).displayBrightnessIncrease
-        case .keyboardBrightnessDecrease:
-            return FeatureStrings.brightness(L10n.shared.language).keyboardBrightnessDecrease
-        case .keyboardBrightnessIncrease:
-            return FeatureStrings.brightness(L10n.shared.language).keyboardBrightnessIncrease
-        case .pointerNextDisplay: return PointerDisplayStrings.localized(L10n.shared.language).title
         }
     }
 
@@ -883,17 +798,13 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
                          excluding role: GlobalShortcutRole?,
                          isOn: (String) -> Bool = { UserDefaults.standard.bool(forKey: $0) },
                          isAvailable: (AppFeature) -> Bool = { $0.isAvailable },
-                         includeInactive: Bool = false,
-                         radialMenuShortcuts: () -> [GlobalShortcut] = { RadialMenuSupport.profileShortcuts() })
+                         includeInactive: Bool = false)
         -> GlobalShortcutRole? {
         let candidates = includeInactive
             ? availableRoles(isAvailable: isAvailable)
             : activeRoles(isOn: isOn, isAvailable: isAvailable)
         return candidates.first { candidate in
             guard candidate != role else { return false }
-            // The radial menu's role key only seeds the first wheel. Every
-            // wheel registers its own combination, so those are the ones taken.
-            if candidate == .radialMenu { return radialMenuShortcuts().contains(shortcut) }
             return candidate.savedShortcut == shortcut
         }
     }
@@ -905,38 +816,17 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
     var requiredEnableKeys: [String] {
         switch self {
         case .keepAwake: return [DefaultsKey.hotkeyEnabled]
-        case .shelf: return [DefaultsKey.shelfEnabled, DefaultsKey.shelfShortcutEnabled]
         case .switcher, .switcherWindow: return [DefaultsKey.switcherEnabled]
         case .switcherAllWindows:
             return [DefaultsKey.switcherEnabled, DefaultsKey.switcherAllWindowsShortcutEnabled]
-        case .clipboard: return [DefaultsKey.clipboardHistoryEnabled,
-                                 DefaultsKey.clipboardHistoryShortcutEnabled]
-        case .soundOutputSwitcher: return [DefaultsKey.soundOutputSwitcherEnabled]
-        case .pastePlain: return [DefaultsKey.pastePlainEnabled]
-        case .finderRename: return [DefaultsKey.finderRenameEnabled]
-        case .colorPicker: return [DefaultsKey.colorPickerShortcutEnabled]
         case .screenOCR: return [DefaultsKey.screenOCRShortcutEnabled]
-        case .micMute: return [DefaultsKey.micMuteShortcutEnabled]
-        case .quitAll: return [DefaultsKey.quitAppsShortcutEnabled]
-        case .quitAllExceptFront: return [DefaultsKey.quitAppsExceptFrontShortcutEnabled]
-        case .quickLauncher: return [DefaultsKey.quickLauncherShortcutEnabled]
         case .screenshot: return [DefaultsKey.screenshotShortcutEnabled]
         case .screenshotFullScreen: return [DefaultsKey.screenshotFullScreenShortcutEnabled]
         case .screenshotLastCapture: return [DefaultsKey.screenshotLastCaptureShortcutEnabled]
         case .screenshotUpload: return [DefaultsKey.screenshotUploadShortcutEnabled, DefaultsKey.screenshotSharingEnabled]
         case .recentCaptures: return [DefaultsKey.recentCapturesShortcutEnabled]
         case .screenshotClipboard: return [DefaultsKey.screenshotClipboardShortcutEnabled]
-        case .cameraPreview: return [DefaultsKey.cameraPreviewShortcutEnabled]
-        case .radialMenu: return [DefaultsKey.radialMenuEnabled]
-        case .scratchpad: return [DefaultsKey.scratchpadShortcutEnabled]
-        case .snippetLibrary: return [DefaultsKey.snippetLibraryEnabled]
-        case .commandBar: return [DefaultsKey.commandBarShortcutEnabled]
         case .screenRecorder: return [DefaultsKey.recorderShortcutEnabled]
-        case .displayBrightnessDecrease, .displayBrightnessIncrease:
-            return [DefaultsKey.brightnessControlEnabled, DefaultsKey.displayBrightnessShortcutsEnabled]
-        case .keyboardBrightnessDecrease, .keyboardBrightnessIncrease:
-            return [DefaultsKey.keyboardBrightnessShortcutsEnabled]
-        case .pointerNextDisplay: return [DefaultsKey.pointerDisplayEnabled]
         }
     }
 
@@ -946,29 +836,12 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
     var feature: AppFeature {
         switch self {
         case .keepAwake: return .keepAwake
-        case .shelf: return .shelf
         case .switcher, .switcherWindow, .switcherAllWindows: return .switcher
-        case .clipboard: return .clipboardHistory
-        case .soundOutputSwitcher: return .soundOutputSwitcher
-        case .pastePlain: return .pastePlain
-        case .finderRename: return .finderRename
-        case .colorPicker: return .colorPicker
         case .screenOCR: return .screenOCR
-        case .micMute: return .micMute
-        case .quitAll, .quitAllExceptFront: return .quitApps
-        case .quickLauncher: return .quickLauncher
         case .screenshot, .screenshotFullScreen, .screenshotLastCapture, .recentCaptures,
              .screenshotClipboard, .screenshotUpload:
             return .screenshot
-        case .cameraPreview: return .cameraPreview
-        case .radialMenu: return .radialMenu
-        case .scratchpad: return .scratchpad
-        case .snippetLibrary: return .textSnippets
-        case .commandBar: return .commandBar
         case .screenRecorder: return .screenRecorder
-        case .displayBrightnessDecrease, .displayBrightnessIncrease: return .brightness
-        case .keyboardBrightnessDecrease, .keyboardBrightnessIncrease: return .brightness
-        case .pointerNextDisplay: return .windowLayout
         }
     }
 
@@ -977,7 +850,6 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
     /// service and follows that feature's availability.
     var group: FeatureGroup {
         switch self {
-        case .keyboardBrightnessDecrease, .keyboardBrightnessIncrease: return .mouseKeyboard
         default: return feature.group
         }
     }
@@ -990,13 +862,9 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
     /// promise refuses the combination instead of making it.
     var supportsTakeOver: Bool {
         switch self {
-        case .switcher, .switcherWindow, .switcherAllWindows, .radialMenu: return false
+        case .switcher, .switcherWindow, .switcherAllWindows: return false
         default: return true
         }
-    }
-
-    var isKeyboardBrightness: Bool {
-        self == .keyboardBrightnessDecrease || self == .keyboardBrightnessIncrease
     }
 
     /// Capture roles normally follow their own tool. Shared capture history
@@ -1047,11 +915,11 @@ enum GlobalShortcutRole: CaseIterable, Identifiable {
     /// The features whose shortcuts share one Screen capture group on the
     /// central shortcuts page.
     static let captureFeatures: [AppFeature] =
-        [.screenshot, .screenRecorder, .screenOCR, .colorPicker]
+        [.screenshot, .screenRecorder, .screenOCR]
 
     /// Chooser tools first, in chooser order, then shared history and screenshot extras.
     static let captureDisplayOrder: [GlobalShortcutRole] = [
-        .screenshot, .screenRecorder, .screenOCR, .colorPicker,
+        .screenshot, .screenRecorder, .screenOCR,
         .recentCaptures, .screenshotFullScreen, .screenshotLastCapture, .screenshotClipboard, .screenshotUpload,
     ]
 

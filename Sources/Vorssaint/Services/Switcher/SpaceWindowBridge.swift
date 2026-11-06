@@ -474,10 +474,8 @@ enum SpaceWindowBridge {
             return
         }
         let restoreFocus = {
-            if FocusFollowsMouseSupport.shouldRestoreFocus(
-                to: focusedWindowID,
-                reportedFocusedWindowID: WindowActivator.focusedWindowID(for: ownerPID),
-                appIsFrontmost: NSWorkspace.shared.frontmostApplication?.processIdentifier == ownerPID) {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == ownerPID,
+               WindowActivator.focusedWindowID(for: ownerPID) == focusedWindowID {
                 postFocusRecord(focusedWindowID, ownerPID: ownerPID, gained: true)
             }
         }

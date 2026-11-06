@@ -67,14 +67,7 @@ struct SwitcherScrollNavigation {
     private var lastGesturePhaseTimestamp: CGEventTimestamp?
     private var wasMouseWheel: Bool?
 
-    /// `direction` is Scroll Direction where it applies under the pointer.
-    /// Its tap turns the wheel around only after this one has consumed it,
-    /// so a mouse wheel is turned here to follow the way everything else
-    /// scrolls, as it did when that tap ran first.
-    mutating func selectionDelta(for input: CGEvent, direction: ScrollDirectionPreferences? = nil) -> Int {
-        guard input.getIntegerValueField(.eventSourceUserData) != ScrollWheelSupport.syntheticTag else {
-            return 0
-        }
+    mutating func selectionDelta(for input: CGEvent) -> Int {
         let traits = ScrollWheelEventTraits(
             isContinuous: input.getIntegerValueField(.scrollWheelEventIsContinuous) != 0,
             momentumPhase: input.getIntegerValueField(.scrollWheelEventMomentumPhase),
@@ -82,17 +75,9 @@ struct SwitcherScrollNavigation {
             scrollCount: input.getIntegerValueField(.scrollWheelEventScrollCount)
         )
         let phase = CGScrollPhase(rawValue: UInt32(truncatingIfNeeded: traits.scrollPhase))
-        let isMouseWheel = ScrollWheelSupport.isMouseWheel(traits, secondsSinceLastGesturePhase:
+        let isMouseWheel = ScrollWheelEventTraits.isMouseWheel(traits, secondsSinceLastGesturePhase:
             lastGesturePhaseTimestamp.map { Double(input.timestamp &- $0) / 1_000_000_000 })
-        var event = input
-        if isMouseWheel, let direction, direction.invertVertical || direction.invertHorizontal,
-           let turned = input.copy() {
-            ScrollWheelSupport.applyDirection(to: turned, isContinuous: traits.isContinuous,
-                                              invertVertical: direction.invertVertical,
-                                              invertHorizontal: direction.invertHorizontal,
-                                              horizontalModifier: nil)
-            event = turned
-        }
+        let event = input
         if traits.scrollPhase != 0 || traits.momentumPhase != 0 {
             lastGesturePhaseTimestamp = event.timestamp
         }
@@ -114,7 +99,7 @@ struct SwitcherScrollNavigation {
             if lines != 0 { return lines }
             let fraction = event.getDoubleValueField(fixed)
             if fraction != 0 { return fraction }
-            return traits.isContinuous ? event.getDoubleValueField(point) / ScrollWheelSupport.pointsPerLine : 0
+            return traits.isContinuous ? event.getDoubleValueField(point) / ScrollWheelEventTraits.pointsPerLine : 0
         }
         let vertical = movement(line: .scrollWheelEventDeltaAxis1, fixed: .scrollWheelEventFixedPtDeltaAxis1,
                                 point: .scrollWheelEventPointDeltaAxis1)
@@ -2468,5 +2453,29 @@ enum SwitcherSupport {
         parts.joined(separator: " ")
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+/// What a scroll event says about its source: a mouse wheel, or a touch
+/// surface with phases and momentum.
+struct ScrollWheelEventTraits: Equatable {
+    let isContinuous: Bool
+    let momentumPhase: Int64
+    let scrollPhase: Int64
+    let scrollCount: Int64
+
+    static let pointsPerLine: Double = 10
+    /// Trackpads can send one phaseless event between a gesture's end and its momentum.
+    static let touchGestureGraceSeconds: TimeInterval = 0.3
+
+    static func isMouseWheel(_ traits: ScrollWheelEventTraits,
+                             secondsSinceLastGesturePhase: TimeInterval?) -> Bool {
+        if !traits.isContinuous { return true }
+        guard traits.momentumPhase == 0, traits.scrollPhase == 0 else { return false }
+        if traits.scrollCount != 0, let elapsed = secondsSinceLastGesturePhase,
+           elapsed <= touchGestureGraceSeconds {
+            return false
+        }
+        return true
     }
 }

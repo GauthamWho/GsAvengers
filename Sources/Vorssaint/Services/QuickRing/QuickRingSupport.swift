@@ -174,49 +174,9 @@ struct QuickRingDoubleTap {
     }
 }
 
-/// The rest of a click whose press opened or closed the ring: its release is
-/// the ring's too, so no app sees half a click. A new press of the same
-/// button means the release went missing (a tap the system paused); the old
-/// claim is dropped so it can never eat a later, unrelated release.
-struct QuickRingClickSwallow {
-    private(set) var button: Int64?
-
-    /// True when this event belongs to the ring and must not reach the app.
-    mutating func takesRest(isPress: Bool, isRelease: Bool, button pressed: Int64) -> Bool {
-        guard let owner = button, owner == pressed else { return false }
-        if isPress {
-            button = nil
-            return false
-        }
-        if isRelease {
-            button = nil
-            return true
-        }
-        return false
-    }
-
-    mutating func claim(_ pressed: Int64) { button = pressed }
-    mutating func reset() { button = nil }
-}
-
-/// The three ways to open the ring, each with its own switch.
+/// How the ring opens: a double-tap of ⌃ Control.
 enum QuickRingTrigger: CaseIterable {
-    case controlDoubleTap, controlClick, middleClick
+    case controlDoubleTap
 
-    var defaultsKey: String {
-        switch self {
-        case .controlDoubleTap: return DefaultsKey.quickRingControlDoubleTap
-        case .controlClick: return DefaultsKey.quickRingControlClick
-        case .middleClick: return DefaultsKey.quickRingMiddleClick
-        }
-    }
-
-    /// The mouse button number of the middle button in Quartz events.
-    static let middleButtonNumber: Int64 = 2
-
-    /// Control-click opens the ring only with Control alone: ⌃⌘ is the window
-    /// drag gesture and other chords belong to the apps.
-    static func isControlClick(control: Bool, command: Bool, option: Bool, shift: Bool) -> Bool {
-        control && !command && !option && !shift
-    }
+    var defaultsKey: String { DefaultsKey.quickRingControlDoubleTap }
 }

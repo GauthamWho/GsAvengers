@@ -1,23 +1,11 @@
 /* macOS Automation permission prompt. */
-"NSAppleEventsUsageDescription" = "O G’s Mac usa a Automação para mover arquivos, enviar itens ao Lixo, abrir comandos solicitados e controlar a reprodução nos seus apps de mídia.";
+"NSAppleEventsUsageDescription" = "O G’s Avengers pede ao Finder para mover os arquivos que você recorta e cola.";
 
 /* macOS Screen & System Audio Recording permission prompt. */
-"NSAudioCaptureUsageDescription" = "O G’s Mac usa o áudio de cada app para ajustar o volume no mixer e para incluir o som do Mac nas gravações de tela que você iniciar. Nada sai do seu Mac.";
-
-/* macOS Bluetooth permission prompt. */
-"NSBluetoothAlwaysUsageDescription" = "O G’s Mac usa o Bluetooth apenas para ler a bateria dos periféricos conectados. Nada sai do seu Mac.";
+"NSAudioCaptureUsageDescription" = "O G’s Avengers inclui o som do Mac nas gravações de tela que você inicia, só quando você ativa. Nada sai do seu Mac.";
 
 /* macOS Microphone permission prompt. */
-"NSMicrophoneUsageDescription" = "O G’s Mac grava seu microfone apenas quando você o ativa em uma gravação de tela. O áudio fica no seu Mac, a menos que você escolha criar um link temporário.";
+"NSMicrophoneUsageDescription" = "O G’s Avengers grava seu microfone só quando você o ativa para uma gravação de tela.";
 
-/* macOS Camera permission prompt. */
-"NSCameraUsageDescription" = "O G’s Mac mostra sua câmera apenas na janela de prévia que você abre, para conferir como você está antes de uma chamada. Nada é gravado nem sai do seu Mac.";
-
-/* macOS Downloads folder permission prompt. */
-"NSDownloadsFolderUsageDescription" = "O G’s Mac consulta metadados locais em Downloads para revisar, organizar ou mover para a Lixeira apenas os arquivos confirmados do WhatsApp que você escolher. A Limpeza também procura capturas de tela esquecidas quando você as salva aqui.";
-
-/* macOS user-selected organizer destination prompts. */
-"NSDesktopFolderUsageDescription" = "O G’s Mac organiza downloads confirmados do WhatsApp em uma pasta de destino escolhida explicitamente por você. A Limpeza também procura capturas de tela esquecidas quando você as salva aqui.";
-"NSDocumentsFolderUsageDescription" = "O G’s Mac organiza downloads confirmados do WhatsApp em uma pasta de destino escolhida explicitamente por você. A Limpeza também procura capturas de tela esquecidas quando você as salva aqui.";
-"NSNetworkVolumesUsageDescription" = "O G’s Mac organiza downloads confirmados do WhatsApp em uma pasta de destino escolhida explicitamente por você. A Limpeza também procura capturas de tela esquecidas quando você as salva aqui.";
-"NSRemovableVolumesUsageDescription" = "O G’s Mac organiza downloads confirmados do WhatsApp em uma pasta de destino escolhida explicitamente por você. A Limpeza também procura capturas de tela esquecidas quando você as salva aqui.";
+/* macOS Local Network permission prompt (Windows keyboard & mouse sharing). */
+"NSLocalNetworkUsageDescription" = "O G’s Avengers encontra seu notebook Windows no Wi-Fi de casa para que um teclado e um mouse funcionem nos dois.";

@@ -40,6 +40,12 @@ enum PointerTapRunLoop {
         CFRunLoopWakeUp(runLoop)
     }
 
+    /// Runs `work` on the pointer thread (taps made there are served there).
+    static func perform(_ work: @escaping () -> Void) {
+        CFRunLoopPerformBlock(runLoop, CFRunLoopMode.commonModes.rawValue, work)
+        CFRunLoopWakeUp(runLoop)
+    }
+
     /// Built on first use: a feature that never runs never starts the thread.
     private static let runLoop: CFRunLoop = {
         var started: CFRunLoop?

@@ -1,23 +1,11 @@
 /* macOS Automation permission prompt. */
-"NSAppleEventsUsageDescription" = "G’s Mac usa Automatización para mover archivos, enviar elementos a la Papelera, abrir los comandos solicitados y controlar la reproducción en tus apps multimedia.";
+"NSAppleEventsUsageDescription" = "G’s Avengers pide a Finder que mueva los archivos que cortas y pegas.";
 
 /* macOS Screen & System Audio Recording permission prompt. */
-"NSAudioCaptureUsageDescription" = "G’s Mac usa el audio de cada app para ajustar su volumen en el mezclador y para incluir el sonido del Mac en las grabaciones de pantalla que inicies. Nada sale de tu Mac.";
-
-/* macOS Bluetooth permission prompt. */
-"NSBluetoothAlwaysUsageDescription" = "G’s Mac usa Bluetooth solo para leer la batería de los periféricos conectados. Nada sale de tu Mac.";
+"NSAudioCaptureUsageDescription" = "G’s Avengers incluye el sonido del Mac en las grabaciones de pantalla que inicias, solo si lo activas. Nada sale de tu Mac.";
 
 /* macOS Microphone permission prompt. */
-"NSMicrophoneUsageDescription" = "G’s Mac graba tu micrófono solo cuando lo activas para una grabación de pantalla. El audio se queda en tu Mac salvo que elijas crear un enlace temporal.";
+"NSMicrophoneUsageDescription" = "G’s Avengers graba tu micrófono solo cuando lo activas para una grabación de pantalla.";
 
-/* macOS Camera permission prompt. */
-"NSCameraUsageDescription" = "G’s Mac muestra tu cámara solo en la ventana de vista previa que abres, para que compruebes cómo te ves antes de una llamada. No se graba nada ni nada sale de tu Mac.";
-
-/* macOS Downloads folder permission prompt. */
-"NSDownloadsFolderUsageDescription" = "G’s Mac consulta metadatos locales en Descargas para revisar, organizar o enviar a la Papelera solo los archivos confirmados de WhatsApp que tú elijas. Limpieza también busca capturas olvidadas si guardas tus capturas aquí.";
-
-/* macOS user-selected organizer destination prompts. */
-"NSDesktopFolderUsageDescription" = "G’s Mac organiza las descargas confirmadas de WhatsApp en una carpeta de destino que tú eliges expresamente. Limpieza también busca capturas olvidadas si guardas tus capturas aquí.";
-"NSDocumentsFolderUsageDescription" = "G’s Mac organiza las descargas confirmadas de WhatsApp en una carpeta de destino que tú eliges expresamente. Limpieza también busca capturas olvidadas si guardas tus capturas aquí.";
-"NSNetworkVolumesUsageDescription" = "G’s Mac organiza las descargas confirmadas de WhatsApp en una carpeta de destino que tú eliges expresamente. Limpieza también busca capturas olvidadas si guardas tus capturas aquí.";
-"NSRemovableVolumesUsageDescription" = "G’s Mac organiza las descargas confirmadas de WhatsApp en una carpeta de destino que tú eliges expresamente. Limpieza también busca capturas olvidadas si guardas tus capturas aquí.";
+/* macOS Local Network permission prompt (Windows keyboard & mouse sharing). */
+"NSLocalNetworkUsageDescription" = "G’s Avengers encuentra tu portátil con Windows en la Wi-Fi de casa para que un teclado y un ratón funcionen en los dos.";

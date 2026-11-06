@@ -135,13 +135,7 @@ final class ScreenCaptureService: ObservableObject {
         let tools = duringRecording ? [selected] : available
 
         guard Permissions.shared.screenRecording else {
-            // Color sampling itself needs no capture permission, so its
-            // direct action keeps the native path when capture access is off.
-            if selected == .color {
-                ColorSamplerService.shared.pickNative()
-            } else {
-                Permissions.shared.requestScreenRecording()
-            }
+            Permissions.shared.requestScreenRecording()
             return
         }
         if selected == .recording,
@@ -244,7 +238,7 @@ final class ScreenCaptureService: ObservableObject {
                 ScreenshotService.shared.receiveUnifiedCapture(capture)
             case .text:
                 ScreenTextService.shared.receiveUnifiedCapture(capture)
-            case .recording, .color:
+            case .recording:
                 showFailure(for: selected)
             }
         case .region(let region):
@@ -260,12 +254,6 @@ final class ScreenCaptureService: ObservableObject {
                 return
             }
             ScreenshotService.shared.receiveUnifiedScrollingRegion(region)
-        case .color(let color):
-            guard selected == .color else {
-                showFailure(for: selected)
-                return
-            }
-            ColorSamplerService.shared.receiveUnifiedColor(color)
         case .cancelled:
             break
         case .failed:

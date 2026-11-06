@@ -619,6 +619,7 @@ enum DefaultsKey {
     static let quickRingMiddleClick = "quickRingMiddleClick"
     /// The embedded clipboard helper (fn V / fn E) runs while this is on.
     static let gsavClipboardHelperEnabled = "gsavClipboardHelperEnabled"
+    static let sharingEnabled = "sharingEnabled"
     static let scratchpadShortcutEnabled = "scratchpadShortcutEnabled"
     static let scratchpadShortcut = "scratchpadShortcut"
     static let commandBarShortcutEnabled = "commandBarShortcutEnabled"
@@ -843,35 +844,7 @@ enum DefaultsKey {
     static func featureAvailable(_ id: String) -> String { "featureAvailable.\(id)" }
 }
 
-/// Bump `currentFeatureSet` when first-run feature defaults need a quiet marker.
-enum OnboardingInfo {
-    // 2: system monitor, configurable panel and menu bar metrics.
-    // 3: app languages and support settings.
-    // 4: navigable menu panel sections.
-    static let currentFeatureSet = 4
-}
 
-enum SupportUpdateIntroInfo {
-    /// The stable release that gets this invitation, and the patches after it,
-    /// which share one completion marker. The next stable update also includes
-    /// people who completed the previous invitation.
-    static let releaseVersion = "3.4.3"
-
-    // Older beta onboarding wrote the release version before this screen was
-    // available. A distinct completion marker keeps those upgraders eligible.
-    static let seenVersion = "3.4.3-support"
-
-    static func matchesRelease(_ appVersion: String) -> Bool {
-        guard let version = UpdateServiceSupport.SemanticVersion(raw: appVersion),
-              let release = UpdateServiceSupport.SemanticVersion(raw: releaseVersion) else { return false }
-        return (version.major, version.minor) == (release.major, release.minor)
-            && version.patch >= release.patch && version.prerelease.isEmpty
-    }
-
-    static func shouldShow(appVersion: String, lastSeenVersion: String?) -> Bool {
-        matchesRelease(appVersion) && lastSeenVersion != seenVersion
-    }
-}
 
 enum KeepAwakeIconTint: String, CaseIterable, Identifiable {
     case orange, green, blue, purple, pink, none
@@ -983,13 +956,8 @@ enum Defaults {
     static let defaultKeyboardDebounceWindowMs = 5
     static let defaultSnippetSoundName = "Tink"
     static let allowedKeyboardDebounceWindowRange = 0...500
-    /// Stepper increment for the keyboard debounce window. Kept at 1 ms so
-    /// magnetic-keyboard users can pick values below the old 5 ms UI step
-    /// without changing the stored range (issue #1551).
-    static let keyboardDebounceWindowStep = 1
     static let defaultMouseClickDebounceWindowMs = 25
     static let allowedMouseClickDebounceWindowRange = 5...100
-    static let allowedMenuBarPresets = ["dense"]
     static let allowedMenuBarMetricSpacings = ["standard", "compact"]
     static let allowedMenuBarMetricAppearances = ["values", "bars"]
     static let defaultMenuBarMetricOrder = [
@@ -1036,24 +1004,17 @@ enum Defaults {
         DefaultsKey.keepAwakeShortcut: "control+option+command:40",
         DefaultsKey.keepAwakeIconTint: KeepAwakeIconTint.orange.rawValue,
         DefaultsKey.keepAwakeActiveIcon: KeepAwakeActiveIcon.vorssaint.rawValue,
-        DefaultsKey.showCountdown: false,
         DefaultsKey.scrollInverterEnabled: false,
         DefaultsKey.scrollInverterHorizontalEnabled: false,
         DefaultsKey.scrollHorizontalEnabled: false,
-        DefaultsKey.scrollHorizontalModifier: ScrollHorizontalModifier.shift.rawValue,
         DefaultsKey.pinchZoomEnabled: false,
-        DefaultsKey.pinchZoomModifier: ScrollZoomModifier.control.rawValue,
         DefaultsKey.focusFollowsMouseEnabled: false,
-        DefaultsKey.focusFollowsMouseDelay: FocusFollowsMouseSupport.defaultDelayMilliseconds,
         DefaultsKey.focusFollowsMouseRaise: true,
         DefaultsKey.focusFollowsMouseWaitForStop: true,
         DefaultsKey.smoothScrollEnabled: false,
         DefaultsKey.smoothScrollStep: 40,
         DefaultsKey.linearScrollEnabled: false,
-        DefaultsKey.linearScrollLines: ScrollWheelSupport.defaultLinesPerNotch,
         DefaultsKey.mouseAccelerationDisabled: false,
-        DefaultsKey.smoothScrollResponse: SmoothScrollSupport.defaultResponse,
-        DefaultsKey.smoothScrollCoast: SmoothScrollSupport.defaultCoast,
         DefaultsKey.mouseNavigationEnabled: false,
         DefaultsKey.mouseButtonShortcutsEnabled: false,
         DefaultsKey.mouseButtonShortcuts: [String: String](),
@@ -1063,17 +1024,7 @@ enum Defaults {
         DefaultsKey.mouseClickDebounceEnabled: false,
         DefaultsKey.mouseClickDebounceWindowMs: defaultMouseClickDebounceWindowMs,
         DefaultsKey.superKeyEnabled: false,
-        DefaultsKey.superKeySource: SuperKeySource.capsLock.rawValue,
-        DefaultsKey.superKeyModifiers: SuperKeySupport.defaultModifierStorageValue,
-        DefaultsKey.superKeySoloAction: SuperKeySoloAction.none.rawValue,
         DefaultsKey.smoothScrollExceptions: [String](),
-        DefaultsKey.linearScrollExceptions: [String](),
-        DefaultsKey.scrollInverterExceptions: [String](),
-        DefaultsKey.focusFollowsMouseExceptions: [String](),
-        DefaultsKey.mouseNavigationExceptions: [String](),
-        DefaultsKey.mouseButtonExceptions: [String](),
-        DefaultsKey.middleClickExceptions: [String](),
-        DefaultsKey.superKeyExceptions: [String](),
         DefaultsKey.switcherEnabled: true,
         DefaultsKey.switcherTakeOverSystemShortcuts: false,
         DefaultsKey.switcherShortcut: "command:48",
@@ -1110,13 +1061,10 @@ enum Defaults {
         DefaultsKey.dockClickCycleWindows: false,
         DefaultsKey.spacesOrderEnabled: false,
         DefaultsKey.middleClickEnabled: false,
-        DefaultsKey.middleClickTapFingers: 0,
         DefaultsKey.previewSize: "normal",
         DefaultsKey.switcherPreviewSize: "normal",
         DefaultsKey.autoCheckUpdates: true,
         DefaultsKey.includeBetaUpdates: false,
-        DefaultsKey.releaseNotesOnUpdate: true,
-        DefaultsKey.showReleaseNotesBeforeUpdate: true,
         DefaultsKey.updateShowcaseIntroVersion: "",
         DefaultsKey.updateShowcaseMediaOverride: "",
         DefaultsKey.mixerShowFinder: true,
@@ -1141,19 +1089,9 @@ enum Defaults {
         DefaultsKey.autoQuitExceptions: mandatoryAutoQuitExceptionBundleIDs,
         DefaultsKey.autoQuitDockApps: [String](),
         DefaultsKey.quitProtectionQuitEnabled: false,
-        DefaultsKey.quitProtectionQuitMode: QuitProtectionMode.hold.rawValue,
-        DefaultsKey.quitProtectionQuitHoldDurationMs: QuitProtectionSupport.defaultHoldDurationMilliseconds,
-        DefaultsKey.quitProtectionQuitDoubleIntervalMs: QuitProtectionSupport.defaultDoublePressIntervalMilliseconds,
-        DefaultsKey.quitProtectionQuitExtraModifier: QuitProtectionExtraModifier.shift.rawValue,
-        DefaultsKey.quitProtectionQuitScope: QuitProtectionScope.all.rawValue,
         DefaultsKey.quitProtectionQuitExceptions: [String](),
         DefaultsKey.quitProtectionQuitShowFeedback: true,
         DefaultsKey.quitProtectionCloseEnabled: false,
-        DefaultsKey.quitProtectionCloseMode: QuitProtectionMode.hold.rawValue,
-        DefaultsKey.quitProtectionCloseHoldDurationMs: QuitProtectionSupport.defaultHoldDurationMilliseconds,
-        DefaultsKey.quitProtectionCloseDoubleIntervalMs: QuitProtectionSupport.defaultDoublePressIntervalMilliseconds,
-        DefaultsKey.quitProtectionCloseExtraModifier: QuitProtectionExtraModifier.shift.rawValue,
-        DefaultsKey.quitProtectionCloseScope: QuitProtectionScope.all.rawValue,
         DefaultsKey.quitProtectionCloseExceptions: [String](),
         DefaultsKey.quitProtectionCloseShowFeedback: true,
         // When the shelf is on, the shake gesture is on too (still toggleable).
@@ -1162,8 +1100,6 @@ enum Defaults {
         DefaultsKey.shelfShakeToOpen: true,
         // On by default (owner's call): it costs nothing until the shelf itself
         // is on, and then the shelf lives handily under the menu bar icon.
-        DefaultsKey.shelfDropZoneEnabled: true,
-        DefaultsKey.shelfDockPlacement: ShelfDockPlacement.menuBar.rawValue,
         // New Shelf behavior stays opt-in for existing users.
         DefaultsKey.shelfEdgeDragEnabled: false,
         // Closing after a drop is new behavior, so it arrives OFF for people
@@ -1179,7 +1115,6 @@ enum Defaults {
         DefaultsKey.brightnessControlEnabled: false,
         DefaultsKey.brightnessKeysEnabled: false,
         DefaultsKey.brightnessOSDEnabled: false,
-        DefaultsKey.brightnessKeyStep: BrightnessSupport.KeyStep.standard.rawValue,
         DefaultsKey.displayBrightnessShortcutsEnabled: false,
         DefaultsKey.displayBrightnessDecreaseShortcut: "shift+command:27",
         DefaultsKey.displayBrightnessIncreaseShortcut: "shift+command:24",
@@ -1200,20 +1135,13 @@ enum Defaults {
         DefaultsKey.cleanerLastAutoRun: 0.0,
         DefaultsKey.cleanerLastAutoFreed: 0,
         DefaultsKey.cleanerLastAutoFailed: 0,
-        DefaultsKey.cleanerScreenshotAgeDays: CleanerPolicy.defaultScreenshotAgeDays,
         DefaultsKey.whatsAppDownloadsEnabled: false,
         DefaultsKey.whatsAppDownloadsAutomaticEnabled: false,
         DefaultsKey.whatsAppDownloadsCategories: "image,video,audio",
         DefaultsKey.whatsAppDownloadsRetentionDays: 7,
         DefaultsKey.whatsAppDownloadsNotify: true,
-        DefaultsKey.whatsAppDownloadsIncludeExisting: false,
         DefaultsKey.whatsAppDownloadsAutomaticStartDate: 0.0,
-        DefaultsKey.whatsAppDownloadsLastAutoRun: 0.0,
         DefaultsKey.whatsAppDownloadsLastCleanup: 0.0,
-        DefaultsKey.whatsAppDownloadsLastCleanupCount: 0,
-        DefaultsKey.whatsAppDownloadsLastCleanupBytes: 0,
-        DefaultsKey.whatsAppDownloadsLastCleanupFailed: 0,
-        DefaultsKey.whatsAppDownloadsLastCleanupAutomatic: false,
         DefaultsKey.whatsAppDownloadsExclusions: [String](),
         DefaultsKey.whatsAppDownloadsAccessConfirmed: false,
         DefaultsKey.whatsAppOrganizerEnabled: false,
@@ -1225,9 +1153,6 @@ enum Defaults {
         DefaultsKey.whatsAppOrganizerRecords: Data(),
         DefaultsKey.whatsAppOrganizerUndoTransaction: Data(),
         DefaultsKey.whatsAppOrganizerLastRun: 0.0,
-        DefaultsKey.whatsAppOrganizerLastMoved: 0,
-        DefaultsKey.whatsAppOrganizerLastDuplicates: 0,
-        DefaultsKey.whatsAppOrganizerLastFailed: 0,
         DefaultsKey.urlCleanerEnabled: false,
         DefaultsKey.urlCleanerCustomParameters: "",
         DefaultsKey.urlCleanerSiteParameters: "",
@@ -1240,8 +1165,6 @@ enum Defaults {
         DefaultsKey.radialMenuEnabled: false,
         DefaultsKey.radialMenuShortcut: GlobalShortcut.radialMenuDefault.storageValue,
         DefaultsKey.radialMenuAtPointer: true,
-        DefaultsKey.radialMenuMouseButton: RadialMenuMouseTrigger.off.rawValue,
-        DefaultsKey.radialMenuActivationMode: RadialMenuActivationMode.pressOrHold.rawValue,
         DefaultsKey.windowMaximizeEnabled: false,
         DefaultsKey.windowMaximizeExcludedApps: [String](),
         DefaultsKey.keyboardDebounceEnabled: false,
@@ -1252,17 +1175,12 @@ enum Defaults {
         DefaultsKey.panelUtilityURLCleaner: true,
         DefaultsKey.panelUtilityUninstaller: true,
         DefaultsKey.uninstallerCommandBarEnabled: false,
-        DefaultsKey.killProcessCommandBarEnabled: true,
-        DefaultsKey.killProcessGroupRelated: true,
-        DefaultsKey.killProcessSortBy: "cpu",
-        DefaultsKey.killProcessSortAscending: false,
         DefaultsKey.panelUtilityCleaner: true,
         DefaultsKey.panelUtilityHomebrew: true,
         DefaultsKey.homebrewGroupDependencies: true,
         DefaultsKey.panelUtilityAppUpdates: true,
         // The list itself costs nothing until it is opened; only the
         // background check keeps a timer, so it starts off.
-        DefaultsKey.appUpdatesCheckFrequency: AppUpdatesSupport.CheckFrequency.off.rawValue,
         DefaultsKey.appUpdatesIncludeHomebrewApps: true,
         DefaultsKey.appUpdatesIncludeAppStore: true,
         DefaultsKey.appUpdatesIncludeOnlineCatalog: true,
@@ -1270,12 +1188,8 @@ enum Defaults {
         DefaultsKey.appUpdatesRules: "[]",
         DefaultsKey.appUpdatesLastCheck: 0.0,
         DefaultsKey.appUpdatesLastCount: 0,
-        DefaultsKey.appUpdatesNotifiedIDs: [String](),
         DefaultsKey.panelUtilityMedia: true,
-        DefaultsKey.panelUtilityClipboard: true,
-        DefaultsKey.panelUtilityWindowLayout: true,
         DefaultsKey.panelControlMouseScroll: true,
-        DefaultsKey.panelControlFocusFollowsMouse: true,
         DefaultsKey.panelControlMouseNavigation: true,
         DefaultsKey.panelControlSwitcher: true,
         DefaultsKey.panelControlDockPreview: true,
@@ -1284,10 +1198,7 @@ enum Defaults {
         DefaultsKey.panelControlShelf: true,
         DefaultsKey.panelControlWindowMaximize: true,
         DefaultsKey.panelControlKeyDebounce: true,
-        DefaultsKey.panelControlDockClick: true,
         DefaultsKey.panelControlDockClickHide: true,
-        DefaultsKey.panelControlDockClickCycle: true,
-        DefaultsKey.panelControlMiddleClick: true,
         DefaultsKey.panelControlTextSnippets: true,
         DefaultsKey.panelControlSuperKey: true,
         DefaultsKey.panelControlRadialMenu: true,
@@ -1296,20 +1207,15 @@ enum Defaults {
         DefaultsKey.panelControlLinearScroll: true,
         DefaultsKey.panelControlMouseClickDebounce: true,
         DefaultsKey.panelControlSpacesOrder: true,
-        DefaultsKey.panelControlWindowsExpanded: false,
-        DefaultsKey.panelControlInputExpanded: false,
-        DefaultsKey.panelControlFilesExpanded: false,
         DefaultsKey.panelShowKeepAwake: true,
         DefaultsKey.panelShowBrightness: true,
         DefaultsKey.panelShowUtilities: true,
         DefaultsKey.panelShowControls: true,
         DefaultsKey.panelShowToggles: true,
-        DefaultsKey.panelShowWallpaper: true,
         DefaultsKey.panelToggleDarkMode: true,
         DefaultsKey.panelToggleKeyboardLight: true,
         DefaultsKey.panelToggleMicMute: true,
         DefaultsKey.panelToggleEmptyTrash: true,
-        DefaultsKey.panelToggleQuitAllApps: true,
         DefaultsKey.panelToggleEjectDisks: true,
         DefaultsKey.panelToggleHiddenFiles: true,
         DefaultsKey.panelToggleDesktopIcons: true,
@@ -1320,7 +1226,6 @@ enum Defaults {
         // The panel shows every monitoring block by default; users hide what
         // they don't want.
         DefaultsKey.monitorInterval: 2,
-        DefaultsKey.temperatureUnit: TemperatureUnit.celsius.rawValue,
         DefaultsKey.menuBarCPUTemperature: false,
         DefaultsKey.menuBarGPUTemperature: false,
         DefaultsKey.menuBarBatteryTemperature: false,
@@ -1328,9 +1233,7 @@ enum Defaults {
         DefaultsKey.menuBarDiskUsage: false,
         DefaultsKey.menuBarDiskActivity: false,
         DefaultsKey.menuBarPeripheralBattery: false,
-        DefaultsKey.menuBarConnectedDevices: false,
         DefaultsKey.menuBarFanSpeed: false,
-        DefaultsKey.menuBarPreset: "dense",
         DefaultsKey.menuBarMetricSpacing: "compact",  // owner's call: compact by default in 3.1.8
         DefaultsKey.menuBarMetricAppearance: "values",
         DefaultsKey.menuBarUsageBarNormalColor: "#64D2FF",
@@ -1340,7 +1243,6 @@ enum Defaults {
         DefaultsKey.menuBarUsageBarHighThreshold: 90,
         DefaultsKey.menuBarHideIconWithMetrics: false,
         DefaultsKey.menuBarIconSymbol: "",
-        DefaultsKey.windowLayoutHiddenActions: "",
         DefaultsKey.windowLayoutWindowGap: 0,
         DefaultsKey.windowLayoutScreenGap: 0,
         DefaultsKey.windowReserveStageManagerSpace: false,
@@ -1352,121 +1254,56 @@ enum Defaults {
         DefaultsKey.menuBarNetworkUploadFirst: false,
         DefaultsKey.menuBarLabelStyle: "compact",
         DefaultsKey.menuBarMemoryStyle: "percent",
-        DefaultsKey.menuBarDiskStyle: "percent",
         DefaultsKey.monitorMemoryMetric: "used",
-        DefaultsKey.monitorShowSystem: true,
-        DefaultsKey.monitorShowNetwork: true,
         DefaultsKey.monitorShowDisk: true,
-        DefaultsKey.monitorShowPower: true,
-        DefaultsKey.monitorShowMixer: true,
         DefaultsKey.panelShowFanControl: true,
-        DefaultsKey.fanControlMode: FanControlMode.system.rawValue,
-        DefaultsKey.fanControlCoolingLevel: FanControlPolicy.defaultCoolingLevel,
-        DefaultsKey.fanControlCurves: FanControlConfiguration.defaultCurvesStorage,
         DefaultsKey.fanControlResume: false,
         DefaultsKey.fanControlResumeConfiguration: "",
         DefaultsKey.fanControlRecoveryNeeded: false,
         DefaultsKey.fanControlHelperVersion: "",
-        DefaultsKey.panelNavigationEnabled: true,
-        DefaultsKey.monitorGraphCPU: true,
-        DefaultsKey.monitorGraphGPU: true,
-        DefaultsKey.monitorGraphMemory: true,
-        DefaultsKey.monitorGraphNetwork: true,
         DefaultsKey.monitorGraphDisk: true,
-        DefaultsKey.monitorGraphPower: true,
-        DefaultsKey.monitorGraphBattery: true,
-        DefaultsKey.monitorGraphScale: true,
         // Every per-item block shows by default; users hide what they don't want.
         DefaultsKey.monitorSysTemps: true,
         DefaultsKey.monitorSysCPU: true,
         DefaultsKey.monitorSysCPUCores: true,
-        DefaultsKey.monitorSysGPU: true,
         DefaultsKey.monitorSysBattery: true,
-        DefaultsKey.monitorSysMemory: true,
         DefaultsKey.monitorSysAlerts: true,
-        DefaultsKey.monitorSysUptime: true,
         DefaultsKey.monitorSysConnectedDevices: true,
-        DefaultsKey.monitorNetSpeed: true,
         DefaultsKey.monitorNetApps: true,
-        DefaultsKey.monitorNetTotals: true,
         DefaultsKey.monitorNetAddresses: true,
-        DefaultsKey.monitorNetTest: true,
-        DefaultsKey.networkSpeedUnit: NetworkSpeedUnit.bytes.rawValue,
         DefaultsKey.monitorDiskUsage: true,
         DefaultsKey.monitorDiskActivity: true,
         DefaultsKey.monitorDiskSMART: true,
         DefaultsKey.monitorDiskProtection: true,
         DefaultsKey.monitorDiskTools: true,
         DefaultsKey.monitorPwrTemperature: true,
-        DefaultsKey.monitorPwrSystem: true,
-        DefaultsKey.monitorPwrAdapter: true,
-        DefaultsKey.monitorPwrBattery: true,
         DefaultsKey.monitorPwrTimeRemaining: true,
-        DefaultsKey.monitorPwrHealth: true,
         DefaultsKey.monitorPwrPeripherals: false,
         DefaultsKey.monitorAlertCPU: false,
         DefaultsKey.monitorAlertCPUTemperature: false,
         DefaultsKey.monitorAlertBatteryTemperature: false,
-        DefaultsKey.monitorAlertMemory: false,
         DefaultsKey.monitorAlertDisk: false,
-        DefaultsKey.monitorAlertBattery: false,
-        DefaultsKey.monitorAlertCPUThreshold: 90,
-        DefaultsKey.monitorAlertCPUTemperatureThreshold: 90,
         DefaultsKey.monitorAlertBatteryTemperatureThreshold: 40,
         DefaultsKey.monitorAlertDiskFreePercent: 10,
-        DefaultsKey.monitorAlertBatteryPercent: 15,
-        DefaultsKey.monitorAlertCooldownMinutes: 15,
-        DefaultsKey.mediaLastTool: MediaTool.videoCompressor.rawValue,
-        DefaultsKey.mediaVideoStart: 0.0,
-        DefaultsKey.mediaVideoEnd: 0.0,
-        DefaultsKey.mediaVideoQuality: 0.68,
-        DefaultsKey.mediaVideoMaxDimension: 1280,
-        DefaultsKey.mediaVideoFPS: 30.0,
-        DefaultsKey.mediaVideoKeepAudio: true,
-        DefaultsKey.mediaVideoCodec: MediaVideoCodec.h264.rawValue,
-        DefaultsKey.mediaVideoSizing: MediaSizingMode.resolution.rawValue,
-        DefaultsKey.mediaVideoTargetMegabytes: 20,
-        DefaultsKey.mediaGIFStart: 0.0,
-        DefaultsKey.mediaGIFEnd: 0.0,
-        DefaultsKey.mediaGIFQuality: 0.74,
-        DefaultsKey.mediaGIFWidth: 720,
-        DefaultsKey.mediaGIFFPS: 12.0,
-        DefaultsKey.mediaGIFLoops: true,
-        DefaultsKey.mediaGIFSizing: MediaSizingMode.resolution.rawValue,
-        DefaultsKey.mediaGIFTargetMegabytes: 10,
-        DefaultsKey.mediaImageQuality: 0.72,
-        DefaultsKey.mediaImageMaxDimension: 1600,
-        DefaultsKey.mediaImageFormat: MediaImageFormat.jpeg.rawValue,
-        DefaultsKey.mediaImageStripMetadata: true,
-        DefaultsKey.mediaImageResizeKind: MediaImageResizeKind.maxDimension.rawValue,
         DefaultsKey.mediaImageResizeWidth: 1600,
         DefaultsKey.mediaImageResizeHeight: 1200,
-        DefaultsKey.mediaImageExactResizeMode: MediaImageExactResizeMode.stretch.rawValue,
-        DefaultsKey.mediaImageWatermarkKind: MediaImageWatermarkKind.off.rawValue,
         DefaultsKey.mediaImageWatermarkText: "",
         DefaultsKey.mediaImageWatermarkLogoPath: "",
-        DefaultsKey.mediaImageWatermarkPosition: MediaImageWatermarkPosition.bottomRight.rawValue,
         DefaultsKey.mediaImageWatermarkOpacity: 0.45,
         DefaultsKey.mediaImageWatermarkMargin: 32,
         DefaultsKey.mediaImageWatermarkScale: 0.18,
         DefaultsKey.mediaImageRenamePattern: "",
-        DefaultsKey.mediaImageBackground: MediaImageBackground.transparent.rawValue,
         DefaultsKey.mediaImagePreserveModificationDate: false,
         DefaultsKey.mediaImageSaveInSubfolder: false,
         DefaultsKey.mediaImageProfiles: "[]",
         DefaultsKey.mediaImageSelectedProfileID: "",
-        DefaultsKey.mediaTextAccurate: true,
-        DefaultsKey.mediaTextLanguageCorrection: true,
         DefaultsKey.clipboardHistoryEnabled: false,
-        DefaultsKey.clipboardHistoryLimit: 50,
         DefaultsKey.clipboardHistoryRetentionDays: 0,
         DefaultsKey.clipboardHistoryFilterSensitiveText: false,
-        DefaultsKey.clipboardHistoryIncludeImagesFiles: true,
         DefaultsKey.clipboardHistoryIgnoredApps: [String](),
         DefaultsKey.windowLayoutIgnoredApps: [String](),
         DefaultsKey.clipboardHistoryQuickPreview: false,
         DefaultsKey.clipboardHistoryShowSourceAppIcons: false,
-        DefaultsKey.clipboardHistoryLayout: ClipboardHistoryLayout.list.rawValue,
         DefaultsKey.clipboardHistoryWindowWidth: 0.0,
         DefaultsKey.clipboardHistoryWindowHeight: 0.0,
         DefaultsKey.clipboardHistoryMenuBarPreview: false,
@@ -1490,7 +1327,6 @@ enum Defaults {
         DefaultsKey.diskImageInstallerRevealsApp: false,
         DefaultsKey.colorPickerShortcutEnabled: false,
         DefaultsKey.colorPickerShortcut: GlobalShortcut.colorPickerDefault.storageValue,
-        DefaultsKey.colorPickerFormat: "hex",
         DefaultsKey.colorPickerBareHex: false,
         DefaultsKey.screenOCRShortcutEnabled: false,
         DefaultsKey.screenOCRShortcut: GlobalShortcut.screenOCRDefault.storageValue,
@@ -1505,8 +1341,6 @@ enum Defaults {
         DefaultsKey.quitAppsKeptApps: mandatoryAutoQuitExceptionBundleIDs,
         DefaultsKey.cameraPreviewShortcutEnabled: false,
         DefaultsKey.cameraPreviewShortcut: GlobalShortcut.cameraPreviewDefault.storageValue,
-        DefaultsKey.wallpaperApplyAllDisplays: true,
-        DefaultsKey.wallpaperFilter: "all",
         DefaultsKey.quickRingControlDoubleTap: true,
         // Off on a fresh install: each takes a click away from the apps.
         DefaultsKey.quickRingControlClick: false,
@@ -1527,19 +1361,12 @@ enum Defaults {
         DefaultsKey.commandBarPositionOffset: "",
         DefaultsKey.commandBarEmojiSkinTone: "",
         DefaultsKey.panelUtilityCommandBar: true,
-        DefaultsKey.scratchpadRetention: ScratchpadRetention.never.rawValue,
         DefaultsKey.scratchpadCloseOnClickOutside: true,
         DefaultsKey.scratchpadBackgroundOpacity: 0.0,
-        DefaultsKey.scratchpadTextSize: ScratchpadSupport.defaultTextSize,
         DefaultsKey.micMuteActive: false,
-        DefaultsKey.micMuteSavedVolume: 0.75,
         DefaultsKey.micMuteMenuBarIndicator: true,  // owner's call: on by default in 3.1.8 (badge only shows while muted)
         DefaultsKey.quickLauncherShortcutEnabled: true,
         DefaultsKey.quickLauncherShortcut: GlobalShortcut.quickLauncherDefault.storageValue,
-        DefaultsKey.quickLauncherHiddenItems: "",
-        DefaultsKey.panelUtilityQuickLauncher: true,
-        DefaultsKey.panelUtilityColorPicker: true,
-        DefaultsKey.panelUtilityScreenOCR: true,
         DefaultsKey.panelUtilityCameraPreview: true,
         DefaultsKey.panelUtilityScratchpad: true,
         DefaultsKey.clipboardHistoryShortcutEnabled: true,
@@ -1634,7 +1461,6 @@ enum Defaults {
         DefaultsKey.windowEdgeSnapDisabledZones: "",
         DefaultsKey.windowEdgeSnapZoneActions: "",
         DefaultsKey.windowGestureEnabled: false,
-        DefaultsKey.windowGestureModifiers: WindowGestureSupport.defaultModifierStorageValue,
         DefaultsKey.windowGestureRaiseWindow: false,
         DefaultsKey.windowLayoutShortcutLeft: GlobalShortcut.windowLayoutLeftDefault.storageValue,
         DefaultsKey.windowLayoutShortcutRight: GlobalShortcut.windowLayoutRightDefault.storageValue,
@@ -1681,37 +1507,8 @@ enum Defaults {
 
     static func register() {
         let defaults = UserDefaults.standard
-        migrateClipboardSensitiveTextOptIn(in: defaults)
-        removeNotchSettings(in: defaults)
-        removeSmartZoomSettings(in: defaults)
-        migrateFanControlVisibility(in: defaults)
-        migrateScrollInverterAxes(in: defaults)
-        migrateLinearScrollAvailability(in: defaults)
-        migrateWhatsAppDownloadsEnabled(in: defaults)
-        migrateBatteryTemperatureVisibility(in: defaults)
-        migratePowerPeripheralsVisibility(in: defaults)
-        migrateSwitcherPreviewSize(in: defaults)
-        migrateSwitcherPreviewExcludedApps(in: defaults)
         defaults.register(defaults: registeredDefaults)
         defaults.register(defaults: AppFeature.availabilityDefaults)
-        activateBetaChannelIfRunningBeta(in: defaults)
-        migrateLegacyMenuBarTemperatureMetric(in: defaults)
-        migrateLegacySwitcherWindowShortcut(in: defaults)
-        migrateLegacyKeyboardDebounceWindow(in: defaults)
-        migrateUtilityOrderForScreenshot(in: defaults)
-        migrateUtilityOrderForAppUpdates(in: defaults)
-        migrateScreenshotOpenEditorDirectly(in: defaults)
-        migrateUnifiedScreenCaptureShortcut(in: defaults)
-        migrateRestoredScreenCaptureShortcuts(in: defaults)
-        migrateOrphanedCaptureShortcut(in: defaults)
-        migrateSilentHeadphonesDisconnectVolume(in: defaults)
-        migrateAppVolumesToPositions(in: defaults)
-        migrateSwitcherWindowlessFinder(in: defaults)
-        migrateQuickRingDoubleTapToControl(in: defaults)
-        recheckBrightnessDDCWriteOnlyPaths(in: defaults)
-        // The "all apps" output choice now lasts one session; a saved one
-        // would move apps that chose their own output after every launch.
-        defaults.removeObject(forKey: DefaultsKey.mixerUniversalOutputDevice)
     }
 
     /// The notch (Dynamic Island) and everything that lived in it were
@@ -1727,15 +1524,6 @@ enum Defaults {
         }
     }
 
-    /// Smart Area Zoom was removed. Its saved choices go once; the restore
-    /// marker stays for `LegacyZoomCleanup`, which puts the zoom back first.
-    static func removeSmartZoomSettings(in defaults: UserDefaults,
-                                        domainName: String? = Bundle.main.bundleIdentifier) {
-        guard let domainName, let saved = defaults.persistentDomain(forName: domainName) else { return }
-        for key in saved.keys where LegacyZoomCleanup.isRemovedSetting(key) {
-            defaults.removeObject(forKey: key)
-        }
-    }
 
     /// Every key the notch owned: its own `notch…` preferences, the install
     /// switch of the island and each of its extensions, the menu panel's
@@ -1849,28 +1637,8 @@ enum Defaults {
                      forKey: DefaultsKey.scrollInverterHorizontalEnabled)
     }
 
-    /// Linear scrolling reached development builds installed, before new
-    /// features became opt-in. Whoever switched it on keeps it installed.
-    static func migrateLinearScrollAvailability(in defaults: UserDefaults) {
-        guard defaults.object(forKey: AppFeature.linearScroll.availabilityKey) == nil,
-              defaults.object(forKey: DefaultsKey.linearScrollEnabled) as? Bool == true
-        else { return }
-        defaults.set(true, forKey: AppFeature.linearScroll.availabilityKey)
-    }
 
 
-    static func migrateFanControlVisibility(in defaults: UserDefaults) {
-        if let oldValue = defaults.object(forKey: DefaultsKey.monitorShowFanControlBeta) as? Bool {
-            if defaults.object(forKey: DefaultsKey.panelShowFanControl) == nil {
-                defaults.set(oldValue, forKey: DefaultsKey.panelShowFanControl)
-            }
-            if oldValue,
-               defaults.object(forKey: AppFeature.fanControl.availabilityKey) == nil {
-                defaults.set(true, forKey: AppFeature.fanControl.availabilityKey)
-            }
-        }
-        defaults.removeObject(forKey: DefaultsKey.monitorShowFanControlBeta)
-    }
 
     /// The "show the desktop app without windows" toggle became one choice of
     /// the windowless apps picker. Only an explicit off has to travel: the
@@ -1955,48 +1723,6 @@ enum Defaults {
         defaults.set(false, forKey: DefaultsKey.screenshotShortcutEnabled)
     }
 
-    /// The general capture shortcut now belongs to the screenshot tool, so on
-    /// an install without that tool a saved combination would register
-    /// nothing. Move it once onto the first available tool that has no
-    /// shortcut of its own, so the combination keeps opening the chooser.
-    /// A tool whose shortcut is switched off but was customized still counts
-    /// as having its own, so its saved combination is never overwritten.
-    /// Availability is read from the passed defaults — the same key
-    /// `isAvailable` reads from the standard ones — to stay testable.
-    static func migrateOrphanedCaptureShortcut(in defaults: UserDefaults) {
-        guard !defaults.bool(forKey: DefaultsKey.orphanedCaptureShortcutMigrated) else {
-            return
-        }
-        defer {
-            defaults.set(true, forKey: DefaultsKey.orphanedCaptureShortcutMigrated)
-        }
-        guard defaults.bool(forKey: DefaultsKey.screenshotShortcutEnabled),
-              !defaults.bool(forKey: AppFeature.screenshot.availabilityKey)
-        else { return }
-        let shortcut = defaults.string(forKey: DefaultsKey.screenshotShortcut)
-            ?? GlobalShortcut.screenshotDefault.storageValue
-
-        let candidates: [(feature: AppFeature, enabled: String,
-                          shortcut: String, unset: String)] = [
-            (.screenRecorder, DefaultsKey.recorderShortcutEnabled,
-             DefaultsKey.recorderShortcut,
-             GlobalShortcut.screenRecorderDefault.storageValue),
-            (.screenOCR, DefaultsKey.screenOCRShortcutEnabled,
-             DefaultsKey.screenOCRShortcut,
-             GlobalShortcut.screenOCRDefault.storageValue),
-            (.colorPicker, DefaultsKey.colorPickerShortcutEnabled,
-             DefaultsKey.colorPickerShortcut,
-             GlobalShortcut.colorPickerDefault.storageValue),
-        ]
-        guard let target = candidates.first(where: {
-            defaults.bool(forKey: $0.feature.availabilityKey)
-                && !defaults.bool(forKey: $0.enabled)
-                && (defaults.string(forKey: $0.shortcut) ?? $0.unset) == $0.unset
-        }) else { return }
-        defaults.set(true, forKey: target.enabled)
-        defaults.set(shortcut, forKey: target.shortcut)
-        defaults.set(false, forKey: DefaultsKey.screenshotShortcutEnabled)
-    }
 
     static func migrateLegacySwitcherWindowShortcut(in defaults: UserDefaults) {
         let wrongDeveloperDefault = GlobalShortcut(keyCode: Int64(kVK_ANSI_Grave),
@@ -2027,16 +1753,6 @@ enum Defaults {
                      forKey: DefaultsKey.panelUtilityOrder)
     }
 
-    /// App updates joins the panel next to the other app-management tools
-    /// instead of at the end of a long list, without disturbing the rest of
-    /// a layout the user arranged.
-    static func migrateUtilityOrderForAppUpdates(in defaults: UserDefaults) {
-        guard let storedOrder = defaults.object(forKey: DefaultsKey.panelUtilityOrder) as? String else {
-            return
-        }
-        defaults.set(utilityOrderWithAppUpdates(storedOrder).joined(separator: ","),
-                     forKey: DefaultsKey.panelUtilityOrder)
-    }
 
     static func utilityOrderWithAppUpdates(_ storedOrder: String) -> [String] {
         var ids = storedOrder.split(separator: ",").map(String.init)
@@ -2140,9 +1856,6 @@ enum Defaults {
             allowedClipboardMenuBarPreviewLengthRange.upperBound)
     }
 
-    static func sanitizedMenuBarPreset(_ preset: String) -> String {
-        allowedMenuBarPresets.contains(preset) ? preset : "dense"
-    }
 
     static func sanitizedMenuBarMetricSpacing(_ spacing: String) -> String {
         // Corrupt values fall back to the registered default (compact).
@@ -2173,29 +1886,6 @@ enum Defaults {
         return result
     }
 
-    private static func migrateLegacyMenuBarTemperatureMetric(in defaults: UserDefaults) {
-        guard let domainName = Bundle.main.bundleIdentifier,
-              let domain = defaults.persistentDomain(forName: domainName),
-              let legacyEnabled = domain[DefaultsKey.menuBarTemperature] as? Bool
-        else { return }
-
-        let newKeys = [
-            DefaultsKey.menuBarCPUTemperature,
-            DefaultsKey.menuBarGPUTemperature,
-            DefaultsKey.menuBarBatteryTemperature,
-        ]
-        let alreadyMigrated = newKeys.contains { domain[$0] != nil }
-        if legacyEnabled, !alreadyMigrated {
-            for key in newKeys {
-                defaults.set(true, forKey: key)
-            }
-        }
-        if let rawOrder = domain[DefaultsKey.menuBarMetricOrder] as? String {
-            defaults.set(sanitizedMenuBarMetricOrder(rawOrder).joined(separator: ","),
-                         forKey: DefaultsKey.menuBarMetricOrder)
-        }
-        defaults.removeObject(forKey: DefaultsKey.menuBarTemperature)
-    }
 
     static func sanitizedMenuBarLabelStyle(_ style: String) -> String {
         allowedMenuBarLabelStyles.contains(style) ? style : "compact"
@@ -2225,17 +1915,12 @@ enum Defaults {
         range.contains(value) ? value : fallback
     }
 
+
     static func sanitizedBundleIdentifierList(_ bundleIDs: [String]) -> [String] {
         var seen = Set<String>()
         var result: [String] = []
         for raw in bundleIDs {
-            // A mouse exception list also carries the path of a program that
-            // has no bundle identifier (issue #1009), and a file name may
-            // legally end in a space. Trimming one would store a spelling the
-            // running program never reports, so only an identifier is trimmed.
-            let bundleID = MouseAppExceptionSupport.isExecutablePathIdentity(raw)
-                ? raw
-                : raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            let bundleID = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !bundleID.isEmpty, !seen.contains(bundleID) else { continue }
             seen.insert(bundleID)
             result.append(bundleID)
@@ -2320,68 +2005,12 @@ enum Defaults {
         defaults.removeObject(forKey: DefaultsKey.quickRingOptionDoubleTapLegacy)
     }
 
-    /// App volumes were saved as the gain itself until the sliders followed
-    /// perceived loudness. Each saved level moves once to the slider position
-    /// that plays it exactly as loud as before, so the update changes where a
-    /// slider sits, never how an app sounds. The marker travels with the
-    /// volumes in a backup: restoring one written before the change clears
-    /// it, and the relaunch that follows converts that backup's levels too.
-    static func migrateAppVolumesToPositions(in defaults: UserDefaults) {
-        guard !defaults.bool(forKey: DefaultsKey.appVolumesArePositions) else { return }
-        defer { defaults.set(true, forKey: DefaultsKey.appVolumesArePositions) }
-        guard let saved = defaults.dictionary(forKey: DefaultsKey.appVolumes), !saved.isEmpty else { return }
-        var positions: [String: Double] = [:]
-        for (id, value) in saved {
-            guard let gain = (value as? NSNumber)?.doubleValue, gain.isFinite else { continue }
-            positions[id] = MixerRoutingSupport.volume(forGain: sanitizedAppVolume(gain))
-        }
-        defaults.set(positions, forKey: DefaultsKey.appVolumes)
-    }
 
-    static func sanitizedAppOutputDeviceUID(_ value: Any?) -> String? {
-        MixerRoutingSupport.sanitizedDeviceUID(value)
-    }
 
-    static func sanitizedAppOutputDevices(_ raw: [String: Any]) -> [String: String] {
-        MixerRoutingSupport.sanitizedRouteMap(raw)
-    }
 
-    static func sanitizedSoundOutputSwitcherDeviceUIDs(_ raw: [Any]) -> [String] {
-        var seen = Set<String>()
-        var result: [String] = []
-        for value in raw {
-            guard let uid = MixerRoutingSupport.sanitizedDeviceUID(value),
-                  seen.insert(uid).inserted else { continue }
-            result.append(uid)
-        }
-        return result
-    }
 
-    static func sanitizedPreferredInputDeviceUID(_ value: Any?) -> String? {
-        MixerRoutingSupport.sanitizedDeviceUID(value)
-    }
 
     static let audioPriorityMaxListSize = 64
 
-    static func sanitizedAudioPriorityUIDs(_ raw: [Any]) -> [String] {
-        var seen = Set<String>()
-        var result: [String] = []
-        for value in raw {
-            guard let uid = MixerRoutingSupport.sanitizedDeviceUID(value),
-                  seen.insert(uid).inserted else { continue }
-            result.append(uid)
-            if result.count >= audioPriorityMaxListSize { break }
-        }
-        return result
-    }
 
-    static func sanitizedAudioPriorityDeviceNames(_ raw: [String: Any]) -> [String: String] {
-        var result: [String: String] = [:]
-        for (rawUID, rawName) in raw {
-            guard let uid = MixerRoutingSupport.sanitizedDeviceUID(rawUID),
-                  let name = MixerRoutingSupport.sanitizedDeviceUID(rawName) else { continue }
-            result[uid] = name
-        }
-        return result
-    }
 }

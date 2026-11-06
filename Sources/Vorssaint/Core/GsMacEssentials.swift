@@ -55,7 +55,7 @@ enum GsMacEssential: String, CaseIterable, Identifiable {
     }
 
     /// Small helpers that ride along with every setup, with no row of their own.
-    static let silentFeatures: Set<AppFeature> = [.quitWindowProtection, .pastePlain]
+    static let silentFeatures: Set<AppFeature> = []
 
     /// What a fresh install has before the setup screen is even answered.
     static var defaultFeatures: Set<AppFeature> {

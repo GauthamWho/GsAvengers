@@ -103,10 +103,6 @@ enum FeatureStrings {
         case .uk: return .uk
         }
     }
-
-    static func whatsAppDownloads(_ language: AppLanguage) -> WhatsAppDownloadStrings {
-        WhatsAppDownloadStrings.localized(language)
-    }
 }
 
 struct MixerFeatureStrings {

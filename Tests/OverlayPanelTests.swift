@@ -23,30 +23,16 @@ enum OverlayPanelTests {
         // HUDs, previews, pickers and the menu's positioning helper: none is a
         // document window, and each floats over other apps' windows.
         let surfaces = [
-            "Sources/Vorssaint/App/AppDelegate.swift",
-            "Sources/Vorssaint/UI/PermissionGuideOverlay.swift",
-            "Sources/Vorssaint/UI/QuitProtection/QuitProtectionHUD.swift",
             "Sources/Vorssaint/Services/QuickTools/QuickToolHUD.swift",
-            "Sources/Vorssaint/Services/QuickTools/QuickLauncherService.swift",
-            "Sources/Vorssaint/Services/QuickTools/CameraPreviewService.swift",
             "Sources/Vorssaint/Services/QuickTools/RecentCaptureService.swift",
             "Sources/Vorssaint/Services/QuickTools/ScreenshotSelectionController.swift",
             "Sources/Vorssaint/Services/QuickTools/ScreenshotQuickPreviewController.swift",
             "Sources/Vorssaint/Services/QuickTools/ScreenshotPinController.swift",
             "Sources/Vorssaint/Services/QuickTools/QRResultController.swift",
-            "Sources/Vorssaint/Services/QuickTools/ScratchpadService.swift",
-            "Sources/Vorssaint/Services/Snippets/SnippetLibraryService.swift",
-            "Sources/Vorssaint/Services/Clipboard/ClipboardHistoryService.swift",
-            "Sources/Vorssaint/Services/CommandBar/CommandBarService.swift",
             "Sources/Vorssaint/Services/Switcher/AppSwitcher.swift",
-            "Sources/Vorssaint/Services/RadialMenu/RadialMenuService.swift",
-            "Sources/Vorssaint/Services/RadialMenu/RadialNowPlayingService.swift",
             "Sources/Vorssaint/Services/DockPreview/DockPreviewService.swift",
             "Sources/Vorssaint/Services/WindowLayout/WindowLayoutService.swift",
-            "Sources/Vorssaint/Services/DiskImageInstaller/DiskImageInstallerService.swift",
             "Sources/Vorssaint/Services/Finder/FinderCutPaste.swift",
-            "Sources/Vorssaint/Services/Display/BrightnessOSD.swift",
-            "Sources/Vorssaint/Services/CleaningMode/CleaningModeManager.swift",
             "Sources/Vorssaint/Services/Recorder/RecorderIndicator.swift",
         ]
         for path in surfaces {

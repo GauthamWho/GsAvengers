@@ -4,9 +4,10 @@
 import AppKit
 import SwiftUI
 
-/// The nine pages of the G’s Avengers window, in sidebar order.
+/// The window's pages: Home has every switch; the others are the few
+/// features that need more than a switch.
 enum AvengersPage: String, CaseIterable, Identifiable {
-    case home, sharing, keyboard, clipboard, quickRing, windowsApps, capture, lidClosed, more
+    case home, sharing, keyboard, clipboard, capture, keepAwake
 
     var id: String { rawValue }
 
@@ -16,25 +17,19 @@ enum AvengersPage: String, CaseIterable, Identifiable {
         case .sharing: return "pc"
         case .keyboard: return "keyboard"
         case .clipboard: return "doc.on.clipboard"
-        case .quickRing: return "circle.circle"
-        case .windowsApps: return "macwindow.on.rectangle"
         case .capture: return "camera.viewfinder"
-        case .lidClosed: return "moon.zzz"
-        case .more: return "ellipsis.circle"
+        case .keepAwake: return "moon.zzz"
         }
     }
 
-    func title(_ text: AvengersStrings, ring: QuickRingStrings) -> String {
+    func title(_ text: AvengersStrings, home: HomeStrings, setup: GsMacSetupStrings) -> String {
         switch self {
         case .home: return text.home
         case .sharing: return text.sharing
         case .keyboard: return text.keyboard
-        case .clipboard: return FeatureStrings.helperApps(L10n.shared.language).clipboardTitle
-        case .quickRing: return ring.title
-        case .windowsApps: return text.windowsApps
+        case .clipboard: return setup.clipboard
         case .capture: return text.capture
-        case .lidClosed: return text.lidClosed
-        case .more: return text.more
+        case .keepAwake: return home.keepAwake
         }
     }
 }
@@ -44,12 +39,14 @@ final class AvengersWindowController: NSObject, NSWindowDelegate {
     static let shared = AvengersWindowController()
     static let contentSize = NSSize(width: 780, height: 600)
 
+    /// Built on open and released on close, with its model and views, so a
+    /// closed window costs no memory and observes nothing.
     private var window: NSWindow?
-    private let router = AvengersRouter()
+    private var router: AvengersRouter?
 
     func show(_ page: AvengersPage? = nil) {
-        if let page { router.page = page }
         if window == nil {
+            let router = AvengersRouter()
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: Self.contentSize),
                                   styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
                                   backing: .buffered, defer: false)
@@ -61,12 +58,13 @@ final class AvengersWindowController: NSObject, NSWindowDelegate {
             window.isOpaque = false
             window.backgroundColor = .clear
             window.isMovableByWindowBackground = true
-            window.contentView = NSHostingView(rootView: AvengersRootView(router: router))
+            window.contentView = NSHostingView(rootView: AvengersRootView(router: router, model: AvengersModel()))
             window.delegate = self
             window.center()
             self.window = window
+            self.router = router
         }
-        HelperBridge.shared.refresh()
+        if let page { router?.page = page }
         if window?.isVisible != true { WindowActivationPolicy.retain() }
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
@@ -74,6 +72,14 @@ final class AvengersWindowController: NSObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         WindowActivationPolicy.release()
+        // Let go of the views and the model on the next turn, after AppKit is done with the window.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.window?.isVisible != true else { return }
+            self.window?.contentView = nil
+            self.window?.delegate = nil
+            self.window = nil
+            self.router = nil
+        }
     }
 }
 
@@ -83,9 +89,8 @@ final class AvengersRouter: ObservableObject {
 
 struct AvengersRootView: View {
     @ObservedObject var router: AvengersRouter
+    @ObservedObject var model: AvengersModel
     @ObservedObject private var l10n = L10n.shared
-    @ObservedObject private var model = AvengersModel.shared
-    @ObservedObject private var bridge = HelperBridge.shared
     @Environment(\.frostSnapshot) private var snapshot
 
     private var text: AvengersStrings { FeatureStrings.avengers(l10n.language) }
@@ -108,11 +113,10 @@ struct AvengersRootView: View {
         .background(FrostBackdrop())
         .environment(\.colorScheme, .light)
         .tint(Frost.accent)
-        .onAppear { bridge.refresh() }
     }
 
     private var page: some View {
-        AvengersPageView(page: router.page, router: router)
+        AvengersPageView(page: router.page, router: router, model: model)
             .padding(.horizontal, 24).padding(.top, 30).padding(.bottom, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -150,7 +154,7 @@ struct AvengersRootView: View {
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(selected ? AnyShapeStyle(Frost.accentGradient) : AnyShapeStyle(Frost.muted))
                     .frame(width: 20)
-                Text(page.title(text, ring: FeatureStrings.quickRing(l10n.language)))
+                Text(page.title(text, home: FeatureStrings.home(l10n.language), setup: FeatureStrings.gsMacSetup(l10n.language)))
                     .font(.system(size: 13, weight: selected ? .semibold : .regular))
                     .foregroundColor(Frost.text).lineLimit(1).minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
@@ -175,17 +179,10 @@ enum AvengersSnapshot {
     static func runAndExit(folder: String, pages: [AvengersPage]) -> Never {
         _ = NSApplication.shared
         MainActor.assumeIsolated {
-            HelperBridge.shared.preview(sharing: HelperWire.ShareState(
-                connected: true, paused: false, active: false, trusted: true, peer: "WINDOWS-PC", peerId: "demo",
-                lastSeen: "", paired: true, pairCode: nil, pairConfirmed: false, side: 1, shareClipboard: true,
-                mouseSpeed: 1.0, scrollSpeed: 1.0, reverseScroll: false,
-                rules: [HelperWire.ShareRule(id: "ctrl.cmd", group: "Main keys", windows: "Ctrl", mac: "⌘", on: true),
-                        HelperWire.ShareRule(id: "win.fn", group: "Main keys", windows: "⊞", mac: "fn", on: true)]),
-                clipboard: HelperWire.ClipboardState())
             for page in pages {
                 let router = AvengersRouter()
                 router.page = page
-                let renderer = ImageRenderer(content: AvengersRootView(router: router).environment(\.frostSnapshot, true))
+                let renderer = ImageRenderer(content: AvengersRootView(router: router, model: AvengersModel()).environment(\.frostSnapshot, true))
                 renderer.scale = 2
                 guard let image = renderer.cgImage else { continue }
                 let rep = NSBitmapImageRep(cgImage: image)

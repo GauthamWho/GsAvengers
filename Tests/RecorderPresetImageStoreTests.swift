@@ -93,23 +93,6 @@ enum RecorderPresetImageStoreTests {
                 .applying(to: applied).images.isEmpty,
                    "a newly saved image-free preset deliberately restores an image-free look")
 
-            let backup = SettingsBackupSupport.payload(appVersion: "3.3.4") {
-                $0 == DefaultsKey.recorderEditorPresets ? encoded : nil
-            }
-            let portableSettings = backup[SettingsBackupSupport.settingsKey] as? [String: Any]
-            let portableData = portableSettings?[DefaultsKey.recorderEditorPresets] as? Data
-            let portable = try portableData.map { try JSONDecoder().decode([RecorderEditPreset].self, from: $0) }
-            suite.expect(portable?.first?.id == saved.id && portable?.first?.images == nil,
-                   "settings backups keep preset style without exporting local picture paths")
-            if let portableData {
-                let carried = SettingsBackupSupport.preservingLocalPresetImages(restored: portableData, local: encoded)
-                suite.expect(try JSONDecoder().decode([RecorderEditPreset].self, from: carried).first?.images == captured,
-                       "restoring settings on this Mac keeps matching presets' private images")
-                suite.expect(SettingsBackupSupport.preservingLocalPresetImages(restored: portableData, local: nil)
-                        == portableData,
-                       "another Mac cannot acquire local image access from a settings backup")
-            }
-
             let beforeFailure = try manager.contentsOfDirectory(atPath: targetTake.folder.path).sorted()
             var missing = captured[0]
             missing.path = storedURL.deletingLastPathComponent().appendingPathComponent("missing.png").path

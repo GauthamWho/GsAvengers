@@ -13,14 +13,12 @@ enum ScreenCaptureTool: String, CaseIterable {
     case screenshot
     case recording
     case text
-    case color
 
     var shortcutKey: String {
         switch self {
         case .screenshot: return "1"
         case .recording: return "2"
         case .text: return "3"
-        case .color: return "4"
         }
     }
 
@@ -34,7 +32,6 @@ enum ScreenCaptureTool: String, CaseIterable {
         case .screenshot: return .screenshot
         case .recording: return .screenRecorder
         case .text: return .screenOCR
-        case .color: return .colorPicker
         }
     }
 
@@ -63,9 +60,6 @@ enum ScreenCaptureTool: String, CaseIterable {
         case .text:
             return DedicatedShortcut(role: .screenOCR,
                                      enabledKey: DefaultsKey.screenOCRShortcutEnabled)
-        case .color:
-            return DedicatedShortcut(role: .colorPicker,
-                                     enabledKey: DefaultsKey.colorPickerShortcutEnabled)
         }
     }
 
@@ -74,7 +68,6 @@ enum ScreenCaptureTool: String, CaseIterable {
         case .screenshot: return DefaultsKey.screenshotShowCaptureMenuOnShortcut
         case .recording: return DefaultsKey.recorderShowCaptureMenuOnShortcut
         case .text: return DefaultsKey.screenOCRShowCaptureMenuOnShortcut
-        case .color: return DefaultsKey.colorPickerShowCaptureMenuOnShortcut
         }
     }
 
@@ -94,7 +87,6 @@ enum ScreenCaptureTool: String, CaseIterable {
         case .screenshot: return "camera.viewfinder"
         case .recording: return "record.circle"
         case .text: return "text.viewfinder"
-        case .color: return "eyedropper"
         }
     }
 
@@ -108,7 +100,6 @@ enum ScreenCaptureTool: String, CaseIterable {
         case .screenshot: return FeatureStrings.screenshot(language).pageTitle
         case .recording: return FeatureStrings.recorder(language).pageTitle
         case .text: return strings.ocrName
-        case .color: return strings.colorPickerName
         }
     }
 
@@ -344,14 +335,6 @@ enum ScreenshotSupport {
         let duration = (defaults.object(forKey: DefaultsKey.screenshotPreviewDuration) as? NSNumber)?
             .intValue ?? defaultConfirmationPreviewDuration
         return .shown(dismissInterval: confirmationPreviewDismissInterval(duration))
-    }
-
-    /// Captures go to the shelf on their own only while the shelf is
-    /// installed and on, so a switched-off shelf never fills up unseen.
-    static func addsCapturesToShelf(in defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: DefaultsKey.screenshotAddToShelf)
-            && AppFeature.shelf.isAvailable(in: defaults)
-            && defaults.bool(forKey: DefaultsKey.shelfEnabled)
     }
 
     /// Remaining stroke for the one-second countdown ring. Time drives the

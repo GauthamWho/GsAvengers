@@ -18,13 +18,12 @@ protocol QuickRingActionProvider {
 /// installed, so an uninstalled service never comes to life for the ring.
 struct GsMacQuickRingActions: QuickRingActionProvider {
     func currentContext() -> QuickRingContext {
-        let recorderAvailable = AppFeature.screenRecorder.isAvailable
+        let recorderAvailable = AppFeature.screenRecorder.isOn
         return QuickRingContext(
             recording: recorderAvailable && ScreenRecorderService.shared.isRecording,
-            screenshotAvailable: AppFeature.screenshot.isAvailable,
+            screenshotAvailable: AppFeature.screenshot.isOn,
             recorderAvailable: recorderAvailable,
-            clipboardAvailable: AppFeature.clipboardHistory.isAvailable
-                && UserDefaults.standard.bool(forKey: DefaultsKey.clipboardHistoryEnabled))
+            clipboardAvailable: AppFeature.clipboardHistory.isOn)
     }
 
     func run(_ item: QuickRingItem) {
@@ -36,8 +35,7 @@ struct GsMacQuickRingActions: QuickRingActionProvider {
             guard AppFeature.screenRecorder.isAvailable else { return }
             ScreenRecorderService.shared.toggle()
         case .clipboard:
-            guard AppFeature.clipboardHistory.isAvailable else { return }
-            ClipboardHistoryService.shared.showHistoryWindow()
+            MainActor.assumeIsolated { ClipboardEngine.shared.open() }
         case .windows:
             // Mission Control's view of every open window.
             let url = URL(fileURLWithPath: "/System/Applications/Mission Control.app")

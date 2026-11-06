@@ -8,15 +8,10 @@ import SwiftUI
 
 /// The Quick Ring: a round glass ring of quick actions (capture, record,
 /// clipboard, windows), opened right around the pointer by a double-tap of
-/// ⌃ Control, ⌃-click or the middle mouse button.
+/// ⌃ Control.
 ///
-/// It runs on the radial menu's engine pieces (slice maths, the fading
-/// `PanelDismissal`, the keyable overlay panel and the session-aware tap
-/// rules) without its profiles, submenus and hold phases. At rest it holds
-/// only the event taps its switched-on triggers need: a listen-only tap for
-/// ⌃ (it never changes or holds a key, and reads no characters) and a
-/// filtering tap for the mouse triggers, which swallows only the click that
-/// opens the ring. Every monitor of an open ring goes with it.
+/// At rest it holds one listen-only, keyboard-only event tap on the input
+/// thread; the monitors of an open ring go with it.
 final class QuickRingService: ObservableObject {
     static let shared = QuickRingService()
 
@@ -35,10 +30,9 @@ final class QuickRingService: ObservableObject {
 
     private var keyTap: CFMachPort?
     private var keyTapSource: CFRunLoopSource?
-    private var mouseTap: CFMachPort?
-    private var mouseTapSource: CFRunLoopSource?
+    /// Touched only on the input thread that serves the tap.
     private var doubleTap = QuickRingDoubleTap()
-    private var swallow = QuickRingClickSwallow()
+    private var pressesAtControlDown: UInt32 = 0
     /// Where the ring's actions come from; G’s Mac's own by default.
     var actions: QuickRingActionProvider = GsMacQuickRingActions()
 
@@ -56,47 +50,20 @@ final class QuickRingService: ObservableObject {
     // MARK: - Lifecycle
 
     func syncWithPreferences() {
-        guard AppFeature.quickRing.isAvailable else {
+        guard AppFeature.quickRing.isOn else {
             suspend()
             return
         }
         syncTaps()
-        warmUp()
-    }
-
-    /// The first render of the hosting view and its glass costs real time
-    /// (over 100 ms); pay it once now, drawn fully transparent and off the
-    /// pointer's way, so the first real opening is as quick as every other.
-    private func warmUp() {
-        guard panel == nil else { return }
-        let panel = ensurePanel()
-        let next = QuickRingSupport.entries(for: actions.currentContext())
-        if entries != next { entries = next }
-        panel.alphaValue = 0
-        panel.ignoresMouseEvents = true
-        panel.orderFrontRegardless()
-        panel.contentView?.layoutSubtreeIfNeeded()
-        panel.displayIfNeeded()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self, weak panel] in
-            guard let self, let panel, !self.shown, !self.dismissal.isActive else { return }
-            panel.orderOut(nil)
-        }
     }
 
     func suspend() {
-        tearDown(&keyTap, &keyTapSource)
-        tearDown(&mouseTap, &mouseTapSource)
-        swallow.reset()
+        tearDownTap()
         forget()
         panel = nil
     }
 
-    private static func triggerOn(_ trigger: QuickRingTrigger) -> Bool {
-        AppFeature.quickRing.isAvailable && UserDefaults.standard.bool(forKey: trigger.defaultsKey)
-    }
-
-    private var wantsKeyTap: Bool { Self.triggerOn(.controlDoubleTap) }
-    private var wantsMouseTap: Bool { Self.triggerOn(.controlClick) || Self.triggerOn(.middleClick) }
+    private var wantsKeyTap: Bool { AppFeature.quickRing.isOn }
 
     private func tapShouldRun(_ wanted: Bool) -> Bool {
         SessionActivitySupport.tapShouldRun(featureWanted: wanted,
@@ -104,107 +71,68 @@ final class QuickRingService: ObservableObject {
                                             sessionIsActive: SessionActivity.shared.isActive)
     }
 
+    /// One listen-only tap for the double-tap of ⌃ Control. It asks only for
+    /// modifier changes and key presses (to know one came in between), never
+    /// for pointer events, and runs on the input thread, not the main thread.
     private func syncTaps() {
         if tapShouldRun(wantsKeyTap) {
-            if let keyTap, !CGEvent.tapIsEnabled(tap: keyTap) { tearDown(&self.keyTap, &keyTapSource) }
-            if keyTap == nil {
-                // Control's own changes, and keys and clicks only to know one
-                // came in between (a ⌃-click is not a tap): characters and
-                // positions are never read.
-                let types: [CGEventType] = [.flagsChanged, .keyDown, .leftMouseDown, .rightMouseDown,
-                                            .otherMouseDown]
-                let mask = types.reduce(CGEventMask(0)) { $0 | (CGEventMask(1) << $1.rawValue) }
-                install(&keyTap, &keyTapSource, mask: mask, options: .listenOnly)
-            }
+            if let keyTap, !CGEvent.tapIsEnabled(tap: keyTap) { tearDownTap() }
+            if keyTap == nil { installTap() }
         } else {
-            tearDown(&keyTap, &keyTapSource)
-            doubleTap.interrupt()
-        }
-        if tapShouldRun(wantsMouseTap) {
-            if let mouseTap, !CGEvent.tapIsEnabled(tap: mouseTap) { tearDown(&self.mouseTap, &mouseTapSource) }
-            if mouseTap == nil {
-                // Only the presses it may take and their releases.
-                let types: [CGEventType] = [.leftMouseDown, .leftMouseUp, .otherMouseDown, .otherMouseUp]
-                let mask = types.reduce(CGEventMask(0)) { $0 | (CGEventMask(1) << $1.rawValue) }
-                install(&mouseTap, &mouseTapSource, mask: mask, options: .defaultTap)
-            }
-        } else {
-            tearDown(&mouseTap, &mouseTapSource)
-            swallow.reset()
+            tearDownTap()
         }
     }
 
-    private func install(_ tap: inout CFMachPort?, _ source: inout CFRunLoopSource?,
-                         mask: CGEventMask, options: CGEventTapOptions) {
+    private static let tapMask: CGEventMask =
+        (CGEventMask(1) << CGEventType.flagsChanged.rawValue) | (CGEventMask(1) << CGEventType.keyDown.rawValue)
+
+    private func installTap() {
         guard let created = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
-            place: options == .listenOnly ? .tailAppendEventTap : .headInsertEventTap,
-            options: options,
-            eventsOfInterest: mask,
+            place: .tailAppendEventTap,
+            options: .listenOnly,
+            eventsOfInterest: Self.tapMask,
             callback: { _, type, event, userInfo in
                 guard let userInfo else { return Unmanaged.passUnretained(event) }
                 let service = Unmanaged<QuickRingService>.fromOpaque(userInfo).takeUnretainedValue()
-                return service.handleTap(type: type, event: event)
+                service.handleTap(type: type, event: event)
+                return Unmanaged.passUnretained(event)
             },
             userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else { return }
-        let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, created, 0)
-        CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+        ), let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, created, 0) else { return }
+        PointerTapRunLoop.add(source)
         CGEvent.tapEnable(tap: created, enable: true)
-        tap = created
-        source = runLoopSource
+        keyTap = created
+        keyTapSource = source
     }
 
-    private func tearDown(_ tap: inout CFMachPort?, _ source: inout CFRunLoopSource?) {
-        if let tap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-            CFMachPortInvalidate(tap)
-        }
-        if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
-        tap = nil
-        source = nil
+    private func tearDownTap() {
+        if let keyTap { CGEvent.tapEnable(tap: keyTap, enable: false) }
+        if let keyTapSource { PointerTapRunLoop.remove(keyTapSource, invalidating: keyTap) }
+        keyTap = nil
+        keyTapSource = nil
     }
 
-    // MARK: - Triggers (the taps' callbacks run on the main run loop)
+    // MARK: - Trigger (runs on the input thread; only toggling hops to main)
 
-    private func handleTap(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        let pass = Unmanaged.passUnretained(event)
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            // Never invalidated from inside its own callback: fail open now,
-            // then let the sync decide whether it comes back.
-            // A release that went by while the tap was paused is not coming.
-            swallow.reset()
-            DispatchQueue.main.async { [weak self] in
-                guard let self else { return }
-                for (tap, wanted) in [(self.keyTap, self.wantsKeyTap), (self.mouseTap, self.wantsMouseTap)] {
-                    if let tap, self.tapShouldRun(wanted) { CGEvent.tapEnable(tap: tap, enable: true) }
-                }
-                self.syncTaps()
-            }
-            return pass
-        }
+    private func handleTap(type: CGEventType, event: CGEvent) {
         switch type {
+        case .tapDisabledByTimeout, .tapDisabledByUserInput:
+            DispatchQueue.main.async { [weak self] in
+                guard let self, let tap = self.keyTap, self.tapShouldRun(self.wantsKeyTap) else { return }
+                CGEvent.tapEnable(tap: tap, enable: true)
+            }
         case .flagsChanged:
             handleFlags(event)
-            return pass
         case .keyDown:
-            // This app's own posted keys (snippets, quit protection) are not
-            // the user typing between two taps.
+            // This app's own posted keys are not the user typing between two taps.
             if !OwnKeyEvent.isPosted(event) { doubleTap.interrupt() }
-            return pass
-        case .rightMouseDown:
-            doubleTap.interrupt()
-            return pass
         default:
-            if type == .leftMouseDown || type == .otherMouseDown { doubleTap.interrupt() }
-            // The listen-only key tap also hears presses; it can take none.
-            guard mouseTap != nil, wantsMouseTap else { return pass }
-            return handleMouse(type: type, event: event) ? nil : pass
+            break
         }
     }
 
     private func handleFlags(_ event: CGEvent) {
-        guard wantsKeyTap else { return }
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         guard keyCode == kVK_Control || keyCode == kVK_RightControl else {
             // Another modifier pressed or let go: not a clean Control tap.
@@ -214,9 +142,8 @@ final class QuickRingService: ObservableObject {
         let flags = event.flags
         let others = !flags.intersection([.maskCommand, .maskAlternate, .maskShift, .maskSecondaryFn]).isEmpty
         let isDown = flags.contains(.maskControl)
-        // System shortcuts (⌃→ between Spaces, ⌃↑ Mission Control) are taken
-        // before any tap hears their key; the window server's own counts of
-        // presses still move, so a ⌃-chord never passes for a tap.
+        // Clicks and system shortcuts between the taps move the window
+        // server's press counters, so a ⌃-chord or ⌃-click never passes for a tap.
         let presses = Self.pressCount()
         var interrupted = false
         if isDown { pressesAtControlDown = presses } else { interrupted = presses != pressesAtControlDown }
@@ -225,70 +152,14 @@ final class QuickRingService: ObservableObject {
                                        at: seconds) else { return }
         // Secure input (a password field) keeps the keyboard to itself.
         guard !IsSecureEventInputEnabled() else { return }
-        #if VORSSAINT_DEVELOPMENT
-        QuickRingFrameMeter.shared.triggered(eventTimestamp: event.timestamp)
-        #endif
-        toggle()
+        DispatchQueue.main.async { [weak self] in self?.toggle() }
     }
-
-    private var pressesAtControlDown: UInt32 = 0
 
     /// Keys and clicks seen by the window server so far (counts only).
     private static func pressCount() -> UInt32 {
         [CGEventType.keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown].reduce(UInt32(0)) {
             $0 &+ CGEventSource.counterForEventType(.combinedSessionState, eventType: $1)
         }
-    }
-
-    /// True when the event is the ring's and must not reach the app.
-    private func handleMouse(type: CGEventType, event: CGEvent) -> Bool {
-        let button = event.getIntegerValueField(.mouseEventButtonNumber)
-        let isPress = type == .leftMouseDown || type == .otherMouseDown
-        let isRelease = type == .leftMouseUp || type == .otherMouseUp
-        // The release of a click whose press was the ring's.
-        if swallow.takesRest(isPress: isPress, isRelease: isRelease, button: button) { return true }
-        guard isPress else { return false }
-        // A shortcut recorder listening for a button owns every press.
-        if MouseButtonShortcutService.isCaptureActive { return false }
-        let scope: MouseExceptionScope
-        if type == .leftMouseDown {
-            guard Self.triggerOn(.controlClick) else { return false }
-            let flags = event.flags
-            guard QuickRingTrigger.isControlClick(control: flags.contains(.maskControl),
-                                                  command: flags.contains(.maskCommand),
-                                                  option: flags.contains(.maskAlternate),
-                                                  shift: flags.contains(.maskShift)) else { return false }
-            scope = .buttonShortcuts
-        } else {
-            guard Self.triggerOn(.middleClick),
-                  button == QuickRingTrigger.middleButtonNumber,
-                  !middleButtonClaimedElsewhere() else { return false }
-            scope = .middleClick
-        }
-        guard !IsSecureEventInputEnabled(),
-              // Apps listed under the mouse exceptions keep their own clicks.
-              !MouseAppExceptions.shared.excludesActionTarget(scope, at: event.location) else { return false }
-        swallow.claim(button)
-        #if VORSSAINT_DEVELOPMENT
-        QuickRingFrameMeter.shared.triggered(eventTimestamp: event.timestamp)
-        #endif
-        toggle()
-        return true
-    }
-
-    /// The middle button stays with whatever already owns it: a radial menu
-    /// wheel, a mouse-button shortcut, or the trackpad's Middle Click.
-    private func middleButtonClaimedElsewhere() -> Bool {
-        let defaults = UserDefaults.standard
-        let button = QuickRingTrigger.middleButtonNumber
-        if AppFeature.middleClick.isAvailable, defaults.bool(forKey: DefaultsKey.middleClickEnabled) { return true }
-        if MouseButtonShortcutSupport.claimsButton(button, defaults: defaults) { return true }
-        guard AppFeature.radialMenu.isAvailable, defaults.bool(forKey: DefaultsKey.radialMenuEnabled) else {
-            return false
-        }
-        return RadialMenuSupport.claimedMouseButtons(defaults.data(forKey: DefaultsKey.radialMenuProfiles),
-                                                     defaults: defaults)
-            .contains(button)
     }
 
     // MARK: - Session
@@ -299,10 +170,7 @@ final class QuickRingService: ObservableObject {
 
     /// Opens at the pointer. Also the Settings page's try-it button.
     func open() {
-        guard AppFeature.quickRing.isAvailable else { return }
-        #if VORSSAINT_DEVELOPMENT
-        QuickRingFrameMeter.shared.opening()
-        #endif
+        guard AppFeature.quickRing.isOn else { return }
         dismissal.cancel { forget() }
         let next = QuickRingSupport.entries(for: actions.currentContext())
         guard !next.isEmpty else { return }
@@ -321,9 +189,6 @@ final class QuickRingService: ObservableObject {
                               width: QuickRingLayout.panelSize, height: QuickRingLayout.panelSize),
                        display: false)
         Self.present(panel)
-        #if VORSSAINT_DEVELOPMENT
-        QuickRingFrameMeter.shared.ordered(panel)
-        #endif
         installMonitors(for: panel)
     }
 
@@ -343,14 +208,11 @@ final class QuickRingService: ObservableObject {
         // Never leave the pointer hidden behind a closed ring (a list's
         // keyboard hide elsewhere waits for a mouse move that may not come).
         NSCursor.setHiddenUntilMouseMoves(false)
-        #if VORSSAINT_DEVELOPMENT
-        QuickRingFrameMeter.shared.closed()
-        #endif
         shown = false
         panel?.orderOut(nil)
         if highlightedIndex != nil { highlightedIndex = nil }
         // A try-it opening can outlive an uninstall; nothing stays resident.
-        if !AppFeature.quickRing.isAvailable {
+        if !AppFeature.quickRing.isOn {
             panel = nil
             entries = []
         }
@@ -527,24 +389,6 @@ final class QuickRingService: ObservableObject {
 
     // MARK: - Diagnostics (developer builds)
 
-    #if VORSSAINT_DEVELOPMENT
-    var probeCenter: CGPoint? { isOpen ? center : nil }
-    /// What the live check reads: whether the ring is up, where, and which
-    /// actions it shows. No screen content.
-    var probeState: [String: Any] {
-        ["open": isOpen,
-         "visible": panel?.isVisible ?? false,
-         "alpha": Double(panel?.alphaValue ?? 0),
-         "center": [Double(center.x), Double(center.y)],
-         "frame": panel.map { [Double($0.frame.minX), Double($0.frame.minY),
-                               Double($0.frame.width), Double($0.frame.height)] } ?? [],
-         "isKey": panel?.isKeyWindow ?? false,
-         "items": entries.map { $0.item.rawValue },
-         "current": entries.filter(\.isCurrent).map { $0.item.rawValue },
-         "keyTap": keyTap != nil,
-         "mouseTap": mouseTap != nil]
-    }
-    #endif
 }
 
 /// The ring's opening and closing motion, run by the render server on the

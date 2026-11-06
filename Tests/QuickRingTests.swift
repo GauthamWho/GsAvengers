@@ -13,8 +13,6 @@ enum QuickRingTests {
         suite.run("quick ring items") { items(suite) }
         suite.run("quick ring placement") { placement(suite) }
         suite.run("quick ring strings") { strings(suite) }
-        suite.run("quick ring click swallowing") { swallowing(suite) }
-        suite.run("quick ring trigger migration") { migration(suite) }
     }
 
     /// Feeds (down?, otherModifiers?, time) and reports whether any step fired.
@@ -83,10 +81,6 @@ enum QuickRingTests {
         suite.expect(fires([(false, false, 9.0), (true, false, 10.00), (false, false, 10.08),
                             (true, false, 10.20), (false, false, 10.27)]),
                      "a stray release with no press first is ignored")
-        suite.expect(QuickRingTrigger.isControlClick(control: true, command: false, option: false, shift: false)
-                     && !QuickRingTrigger.isControlClick(control: true, command: true, option: false, shift: false)
-                     && !QuickRingTrigger.isControlClick(control: false, command: false, option: false, shift: false),
-                     "only Control alone makes a Control-click; ⌃⌘ stays the window drag")
     }
 
     private static func context(recording: Bool = false, screenshot: Bool = true, recorder: Bool = true,
@@ -162,55 +156,10 @@ enum QuickRingTests {
         suite.expect(chord > QuickRingLayout.itemDiameter, "eight buttons fit round the ring without touching")
     }
 
-    private static func swallowing(_ suite: TestSuite) {
-        var swallow = QuickRingClickSwallow()
-        swallow.claim(2)
-        suite.expect(!swallow.takesRest(isPress: false, isRelease: true, button: 0),
-                     "another button's release is never taken")
-        suite.expect(swallow.takesRest(isPress: false, isRelease: true, button: 2),
-                     "the release of the opening click is the ring's")
-        suite.expect(!swallow.takesRest(isPress: false, isRelease: true, button: 2),
-                     "and only that one release")
-
-        // The release went missing (the tap was paused): the next press of the
-        // same button clears the stale claim instead of eating a later release.
-        swallow.claim(0)
-        suite.expect(!swallow.takesRest(isPress: true, isRelease: false, button: 0) && swallow.button == nil,
-                     "a new press drops a stale claim")
-        suite.expect(!swallow.takesRest(isPress: false, isRelease: true, button: 0),
-                     "so the ordinary click's release reaches the app")
-        swallow.claim(2)
-        swallow.reset()
-        suite.expect(swallow.button == nil, "a paused tap or switching off forgets the claim")
-    }
-
-    private static func migration(_ suite: TestSuite) {
-        for (saved, expected) in [(true, true), (false, false)] {
-            let name = "vorss.tests.quickRingMigration"
-            guard let defaults = UserDefaults(suiteName: name) else { continue }
-            defaults.removePersistentDomain(forName: name)
-            defer { defaults.removePersistentDomain(forName: name) }
-            defaults.set(saved, forKey: DefaultsKey.quickRingOptionDoubleTapLegacy)
-            Defaults.migrateQuickRingDoubleTapToControl(in: defaults)
-            suite.expect(defaults.object(forKey: DefaultsKey.quickRingControlDoubleTap) as? Bool == expected,
-                         "the ⌥⌥ choice (\(saved)) carries over to ⌃⌃")
-            suite.expect(defaults.object(forKey: DefaultsKey.quickRingOptionDoubleTapLegacy) == nil,
-                         "the old ⌥⌥ key is removed")
-            defaults.set(!expected, forKey: DefaultsKey.quickRingControlDoubleTap)
-            Defaults.migrateQuickRingDoubleTapToControl(in: defaults)
-            suite.expect(defaults.bool(forKey: DefaultsKey.quickRingControlDoubleTap) == !expected,
-                         "a later ⌃⌃ choice is never overwritten")
-        }
-        suite.expect(!SettingsBackupSupport.exportKeys().contains(DefaultsKey.quickRingOptionDoubleTapLegacy)
-                     && SettingsBackupSupport.exportKeys().contains(DefaultsKey.quickRingControlDoubleTap),
-                     "backups carry the ⌃⌃ switch, not the old one")
-    }
-
     private static func strings(_ suite: TestSuite) {
         for language in AppLanguage.allCases {
             let s = FeatureStrings.quickRing(language)
-            let all = [s.title, s.hubDescription, s.triggersCaption, s.controlDoubleTap, s.controlClick,
-                       s.controlClickCaption, s.middleClick, s.middleClickCaption, s.tryIt,
+            let all = [s.title, s.hubDescription, s.triggersCaption, s.controlDoubleTap, s.tryIt,
                        s.capture, s.record, s.stop, s.clipboard, s.windows]
             suite.expect(all.allSatisfy { !$0.trimmingCharacters(in: .whitespaces).isEmpty },
                          "every Quick Ring string is translated for \(language.rawValue)")
@@ -226,9 +175,7 @@ enum QuickRingTests {
         suite.expect(Set(QuickRingTrigger.allCases.map(\.defaultsKey)) == Set(AppFeature.quickRing.enabledKeys),
                      "each trigger is one of the feature's own switches")
         let registered = Defaults.registeredDefaults
-        suite.expect(registered[DefaultsKey.quickRingControlDoubleTap] as? Bool == true
-                     && registered[DefaultsKey.quickRingControlClick] as? Bool == false
-                     && registered[DefaultsKey.quickRingMiddleClick] as? Bool == false,
-                     "a fresh install opens the ring by ⌃⌃ only; the click triggers take clicks, so they start off")
+        suite.expect(registered[DefaultsKey.quickRingControlDoubleTap] as? Bool == true,
+                     "a fresh install opens the ring by ⌃⌃")
     }
 }

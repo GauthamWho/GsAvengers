@@ -409,23 +409,19 @@ enum LocalizationFeatureContractTests {
         suite.expect(bundleLocalizations.contains("tr"), "Info.plist declares Turkish as a bundle localization")
         suite.expect(bundleLocalizations.contains("ko"), "Info.plist declares Korean as a bundle localization")
         let baseAudioPrompt = infoPlist?["NSAudioCaptureUsageDescription"] as? String ?? ""
-        suite.expect(baseAudioPrompt.contains("G’s Mac uses each app's audio"),
+        suite.expect(baseAudioPrompt.contains("G’s Avengers includes the Mac’s sound"),
                "base audio permission prompt is an English fallback")
-        let organizerFolderPromptKeys = [
-            "NSDesktopFolderUsageDescription", "NSDocumentsFolderUsageDescription",
-            "NSNetworkVolumesUsageDescription", "NSRemovableVolumesUsageDescription",
-        ]
-        suite.expect(organizerFolderPromptKeys.allSatisfy {
-                   !(infoPlist?[$0] as? String ?? "").isEmpty
-               },
-               "the organizer declares every supported custom destination permission")
         let localizedInfoPlists = (try? FileManager.default.contentsOfDirectory(
             atPath: "Resources"))?.filter { $0.hasSuffix(".lproj") } ?? []
+        let promptKeys = ["NSAppleEventsUsageDescription", "NSAudioCaptureUsageDescription",
+                          "NSMicrophoneUsageDescription", "NSLocalNetworkUsageDescription"]
+        suite.expect(promptKeys.allSatisfy { !(infoPlist?[$0] as? String ?? "").isEmpty },
+               "the base Info.plist explains every permission the app asks for")
         suite.expect(localizedInfoPlists.allSatisfy { folder in
             let value = (try? String(contentsOfFile: "Resources/\(folder)/InfoPlist.strings",
                                      encoding: .utf8)) ?? ""
-            return organizerFolderPromptKeys.allSatisfy(value.contains)
-        }, "every localization explains custom organizer folder access")
+            return promptKeys.allSatisfy(value.contains)
+        }, "every localization explains every permission prompt")
         // What the bundle says it speaks and what it ships have to be the same
         // list: a language declared without its folder makes the system offer
         // the app in it and then show every permission prompt in English.
@@ -439,27 +435,6 @@ enum LocalizationFeatureContractTests {
                + "shipped only: \(shippedFolders.subtracting(declared).sorted()))")
         suite.expect(bundleLocalizations.count == AppLanguage.allCases.count,
                "the bundle speaks exactly the languages the app does")
-        // The fan helper's launchd plist ships with the release identifier in
-        // three places, and the Developer build rewrites each one so the two
-        // apps can run side by side. A fourth mention added without a matching
-        // rewrite would leave the Developer build asking launchd for a service
-        // that is registered under the other name, and fan control would just
-        // never answer.
-        let helperTemplate = (try? String(
-            contentsOfFile: "Resources/com.gauthamwho.gsmac.fan-control.plist",
-            encoding: .utf8)) ?? ""
-        suite.expect(!helperTemplate.isEmpty, "the helper template reads back")
-        let releaseHelperID = "com.gauthamwho.gsmac.fan-control"
-        let mentions = helperTemplate.components(separatedBy: releaseHelperID).count - 1
-        suite.expect(mentions == 3,
-               "the helper template names the release service exactly where the build rewrites it (\(mentions))")
-        let buildText = (try? String(contentsOfFile: "build.sh", encoding: .utf8)) ?? ""
-        for key in ["Set :Label $FAN_HELPER_ID",
-                    "Set :BundleProgram Contents/Library/LaunchServices/$FAN_HELPER_ID",
-                    "Delete :MachServices:" + releaseHelperID,
-                    "Add :MachServices:$FAN_HELPER_ID"] {
-            suite.expect(buildText.contains(key), "the Developer build rewrites \(key)")
-        }
         // Every shortcut the app ships with is written to disk as a string and
         // read back on the next launch. One that does not survive the trip
         // would leave that feature with no shortcut at all, on a fresh install,
@@ -518,24 +493,10 @@ enum LocalizationFeatureContractTests {
         }
         suite.expect(brokenShortcuts.isEmpty,
                "a default shortcut survives being written and read back (\(brokenShortcuts.joined(separator: ", ")))")
-        // A restored backup is filtered by valueLooksRight, so a setting whose
-        // own registered default fails that filter would be dropped on import
-        // and come back at its factory value with nothing said. The app's own
-        // defaults are the one set guaranteed to be valid, so they are the
-        // honest fixture for it.
-        var rejectedByOwnFilter: [String] = []
-        for key in SettingsBackupSupport.exportKeys().sorted() {
-            guard let value = Defaults.registeredDefaults[key] else { continue }
-            if !SettingsBackupSupport.valueLooksRight(key, value) {
-                rejectedByOwnFilter.append(key)
-            }
-        }
-        suite.expect(rejectedByOwnFilter.isEmpty,
-               "a restored backup keeps every setting the app itself ships (\(rejectedByOwnFilter.prefix(6).joined(separator: ", ")))")
         let turkishInfoPlistStrings = (try? String(contentsOfFile: "Resources/tr.lproj/InfoPlist.strings",
                                                    encoding: .utf8)) ?? ""
         suite.expect(turkishInfoPlistStrings.contains("NSAudioCaptureUsageDescription")
-               && turkishInfoPlistStrings.contains("Hiçbir şey kaydedilmez"),
+               && turkishInfoPlistStrings.contains("Hiçbir şey Mac’inizden çıkmaz"),
                "Turkish InfoPlist.strings localizes the audio permission prompt")
         let koreanInfoPlistStrings = (try? String(contentsOfFile: "Resources/ko.lproj/InfoPlist.strings",
                                                   encoding: .utf8)) ?? ""

@@ -64,16 +64,10 @@ enum ScreenshotClipboardTests {
         }
         suite.expect(Defaults.registeredDefaults[DefaultsKey.screenshotCopyImageOnly] as? Bool == false,
                      "screenshot copying preserves file paths by default")
-        suite.expect(SettingsBackupSupport.exportKeys().contains(DefaultsKey.screenshotCopyImageOnly),
-                     "the image-only copy choice travels in a settings backup")
         for language in AppLanguage.allCases {
             let strings = FeatureStrings.screenshot(language)
             suite.expect(!strings.copyImageOnlyToggle.isEmpty && !strings.copyImageOnlyCaption.isEmpty,
                          "image-only copy controls are localized in \(language.rawValue)")
-            let keywords = SettingsSearchSupport.screenCaptureKeywords(
-                Strings.localized(language), language: language)
-            suite.expect(keywords.contains(strings.copyImageOnlyToggle),
-                         "image-only copying is searchable in \(language.rawValue)")
         }
 
         let folder = FileManager.default.temporaryDirectory

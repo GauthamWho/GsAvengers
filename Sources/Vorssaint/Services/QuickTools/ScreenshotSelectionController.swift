@@ -30,14 +30,12 @@ final class ScreenshotSelectionController {
     enum Mode {
         case image
         case geometry
-        case color
     }
 
     enum Outcome {
         case captured(Capture)
         case region(RecorderSupport.Region)
         case scrollingRegion(RecorderSupport.Region)
-        case color(NSColor)
         case cancelled
         case failed
     }
@@ -112,9 +110,10 @@ final class ScreenshotSelectionController {
                 scrollingCaptureEnabled: scrollingCaptureEnabled)
     }
     fileprivate var acceptsWindowClick: Bool {
-        acceptsCaptureInput && activeMode != .color && !requiresDraggedRegion && !scrollingCaptureEnabled
+        acceptsCaptureInput && !requiresDraggedRegion && !scrollingCaptureEnabled
     }
-    fileprivate var isPickingColor: Bool { activeMode == .color }
+    /// The colour picker was removed; the loupe is never shown.
+    fileprivate var isPickingColor: Bool { false }
     /// The panel `repeatLastRegion()` would act on, or nil when there is
     /// nothing to repeat: the guide hint and the action read the same
     /// property so the bar cannot promise a key that does nothing.
@@ -209,7 +208,6 @@ final class ScreenshotSelectionController {
     private var activeMode: Mode {
         switch activeTool {
         case .recording: return .geometry
-        case .color: return .color
         case .screenshot, .text: return .image
         case .none: return baseMode
         }
@@ -531,7 +529,6 @@ final class ScreenshotSelectionController {
         // selection that image is the snapshot loaded when the loupe opens;
         // toggling Z refreshes it without letting C copy a different frame
         // from the one currently drawn.
-        panelUnderMouse()?.overlayView.copyLoupeColorUnderPointer()
     }
 
     /// Arrow keys nudge the pointer by exactly one device pixel (ten with
@@ -586,14 +583,7 @@ final class ScreenshotSelectionController {
     // MARK: - Confirmations (called by the views)
 
     private func confirmSelectionWithKeyboard() {
-        if isPickingColor {
-            guard acceptsCaptureInput, !panels.contains(where: { $0.overlayView.isDragging }),
-                  let panel = panelUnderMouse() else { return }
-            let location = currentPointerLocation ?? NSEvent.mouseLocation
-            let point = CGPoint(x: location.x - panel.screenFrame.minX,
-                                y: panel.screenFrame.maxY - location.y)
-            confirmColor(at: point, on: panel)
-        } else if acceptsWindowClick {
+        if acceptsWindowClick {
             captureFullDisplayUnderMouse()
         }
     }
@@ -632,7 +622,7 @@ final class ScreenshotSelectionController {
     }
 
     fileprivate func confirmRegion(_ viewRect: CGRect, on panel: ScreenshotOverlayPanel) {
-        guard acceptsCaptureInput, activeMode != .color,
+        guard acceptsCaptureInput, 
               viewRect.width >= 1, viewRect.height >= 1 else { return }
         markCapturePending()
         Self.lastRegion = (panel.displayID, viewRect)
@@ -672,7 +662,7 @@ final class ScreenshotSelectionController {
     fileprivate func confirmWindow(_ windowID: CGWindowID,
                                    frame: CGRect,
                                    on panel: ScreenshotOverlayPanel) {
-        guard acceptsCaptureInput, activeMode != .color else { return }
+        guard acceptsCaptureInput else { return }
         markCapturePending()
         if activeMode == .geometry {
             finish(.region(region(fromView: frame, on: panel, windowID: windowID)))
@@ -701,7 +691,7 @@ final class ScreenshotSelectionController {
     }
 
     private func captureFullDisplayUnderMouse() {
-        guard acceptsCaptureInput, activeMode != .color else { return }
+        guard acceptsCaptureInput else { return }
         guard let panel = panelUnderMouse() else { return }
         captureFullDisplay(on: panel)
     }
@@ -736,24 +726,6 @@ final class ScreenshotSelectionController {
               let panel = repeatTargetPanel
         else { return }
         confirmRegion(last.viewRect, on: panel)
-    }
-
-    fileprivate func confirmColor(at viewPoint: CGPoint, on panel: ScreenshotOverlayPanel) {
-        guard acceptsCaptureInput, activeMode == .color,
-              let image = panel.frozenImage ?? panel.overlayView.loupeImage else { return }
-        let point = ScreenshotSupport.imagePixelPoint(
-            fromView: viewPoint,
-            viewSize: panel.screenFrame.size,
-            imageSize: CGSize(width: image.width, height: image.height))
-        let x = min(max(Int(point.x.rounded(.down)), 0), image.width - 1)
-        let y = min(max(Int(point.y.rounded(.down)), 0), image.height - 1)
-        guard let color = QuickToolsSupport.sampledColor(in: image, x: x, y: y)
-        else {
-            finish(.failed)
-            return
-        }
-        markCapturePending()
-        finish(.color(color))
     }
 
     /// Live-mode confirmation: the panels leave the screen, the display is
@@ -1174,28 +1146,6 @@ private final class ScreenshotOverlayView: NSView {
         needsDisplay = true
     }
 
-    func copyLoupeColorUnderPointer() {
-        guard let loupeImage else { return }
-        let point = isDragging ? lastDragPoint : hoverPoint
-        let pixelPoint = ScreenshotSupport.imagePixelPoint(
-            fromView: point,
-            viewSize: bounds.size,
-            imageSize: CGSize(width: loupeImage.width, height: loupeImage.height))
-        let sample = loupePixelColor(in: loupeImage, at: pixelPoint)
-        guard let color = sample.color,
-              let value = ColorSamplerService.shared.copyQuietly(color)
-        else { return }
-        copiedValue = value
-        copiedValueReset?.cancel()
-        let reset = DispatchWorkItem { [weak self] in
-            self?.copiedValue = nil
-            self?.needsDisplay = true
-        }
-        copiedValueReset = reset
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4, execute: reset)
-        needsDisplay = true
-    }
-
     func refreshCaptureGuide() {
         guideHost.rootView = CaptureGuideView(
             strings: strings,
@@ -1320,12 +1270,6 @@ private final class ScreenshotOverlayView: NSView {
         guard let origin = dragOrigin else { return }
         dragOrigin = nil
         controller.spaceIsDown = false
-
-        if controller.isPickingColor {
-            selection = .zero
-            controller.confirmColor(at: point, on: panel)
-            return
-        }
 
         let clicked = ScreenshotSupport.isClick(from: origin, to: point)
         if clicked {
@@ -1641,11 +1585,9 @@ private final class ScreenshotOverlayView: NSView {
         let x = Int(sample.point.x)
         let y = Int(sample.point.y)
         var swatch: NSColor?
-        var value = ""
-        if let color = sample.color,
-           let srgb = color.usingColorSpace(.sRGB) {
+        let value = ""
+        if let color = sample.color, let srgb = color.usingColorSpace(.sRGB) {
             swatch = srgb
-            value = ColorSamplerService.shared.formattedValue(color) ?? ""
         }
         let text: String
         if let copiedValue {
@@ -1969,8 +1911,8 @@ private struct UnifiedCaptureGuideContent: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
-            CaptureKeyHint(key: "1–4", icon: "keyboard")
-            if options.selectedTool != .color {
+            CaptureKeyHint(key: "1–3", icon: "keyboard")
+            if true {
                 CaptureKeyHint(key: "↩", icon: "rectangle.inset.filled")
                 if offersScrollingCapture, options.selectedTool == .screenshot {
                     CaptureKeyHint(key: scrollingCaptureEnabled ? "S on" : "S",
@@ -2098,8 +2040,6 @@ private struct UnifiedCaptureGuideContent: View {
                 + "  ·  " + strings.hintDrag + "  ·  " + strings.hintClick
         case .text:
             return l10n.s.ocrCaption
-        case .color:
-            return l10n.s.colorPickerCaption
         }
     }
 }

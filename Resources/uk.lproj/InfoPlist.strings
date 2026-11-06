@@ -1,23 +1,11 @@
 /* macOS Automation permission prompt. */
-"NSAppleEventsUsageDescription" = "G’s Mac використовує Автоматизацію, щоб переміщувати файли, переносити елементи до Смітника, відкривати запитані команди та керувати відтворенням у ваших медіапрограмах.";
+"NSAppleEventsUsageDescription" = "G’s Avengers просить Finder перемістити файли, які ви вирізаєте й вставляєте.";
 
 /* macOS Screen & System Audio Recording permission prompt. */
-"NSAudioCaptureUsageDescription" = "G’s Mac отримує доступ до аудіо кожної програми, щоб регулювати її гучність у мікшері та додавати звук Mac до записів екрана, які ви запускаєте. Нічого не залишає ваш Mac.";
-
-/* macOS Bluetooth permission prompt. */
-"NSBluetoothAlwaysUsageDescription" = "G’s Mac використовує Bluetooth лише для зчитування заряду підключених периферійних пристроїв. Нічого не залишає ваш Mac.";
+"NSAudioCaptureUsageDescription" = "G’s Avengers додає звук Mac до записів екрана, які ви запускаєте, лише якщо ви це ввімкнете. Ніщо не залишає ваш Mac.";
 
 /* macOS Microphone permission prompt. */
-"NSMicrophoneUsageDescription" = "G’s Mac записує звук із мікрофона, лише коли ви вмикаєте його для запису екрана. Аудіо залишається на вашому Mac, якщо ви не вирішите створити тимчасове посилання.";
+"NSMicrophoneUsageDescription" = "G’s Avengers записує мікрофон, лише коли ви вмикаєте його для запису екрана.";
 
-/* macOS Camera permission prompt. */
-"NSCameraUsageDescription" = "G’s Mac показує зображення з камери лише у відкритому вами вікні попереднього перегляду, щоб ви могли перевірити свій вигляд перед викликом. Нічого не записується й не залишає ваш Mac.";
-
-/* macOS Downloads folder permission prompt. */
-"NSDownloadsFolderUsageDescription" = "G’s Mac перевіряє локальні метадані в папці «Викачане», щоб переглядати, упорядковувати або переміщувати до Смітника лише підтверджені файли WhatsApp, які ви вибрали. Очищення також шукає забуті знімки екрана, якщо ви зберігаєте їх сюди.";
-
-/* macOS user-selected organizer destination prompts. */
-"NSDesktopFolderUsageDescription" = "G’s Mac упорядковує підтверджені завантаження WhatsApp у папці призначення, яку ви явно вибрали. Очищення також шукає забуті знімки екрана, якщо ви зберігаєте їх сюди.";
-"NSDocumentsFolderUsageDescription" = "G’s Mac упорядковує підтверджені завантаження WhatsApp у папці призначення, яку ви явно вибрали. Очищення також шукає забуті знімки екрана, якщо ви зберігаєте їх сюди.";
-"NSNetworkVolumesUsageDescription" = "G’s Mac упорядковує підтверджені завантаження WhatsApp у папці призначення, яку ви явно вибрали. Очищення також шукає забуті знімки екрана, якщо ви зберігаєте їх сюди.";
-"NSRemovableVolumesUsageDescription" = "G’s Mac упорядковує підтверджені завантаження WhatsApp у папці призначення, яку ви явно вибрали. Очищення також шукає забуті знімки екрана, якщо ви зберігаєте їх сюди.";
+/* macOS Local Network permission prompt (Windows keyboard & mouse sharing). */
+"NSLocalNetworkUsageDescription" = "G’s Avengers знаходить ваш ноутбук з Windows у домашній мережі Wi-Fi, щоб одна клавіатура й миша працювали на обох.";

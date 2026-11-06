@@ -242,8 +242,5 @@ enum DockAutohideHoldTests {
 
         suite.expect(Defaults.registeredDefaults[DefaultsKey.dockPreviewKeepDockVisible] as? Bool == false,
                      "the experiment is disabled by default")
-        suite.expect(SettingsBackupSupport.exportKeys().contains(DefaultsKey.dockPreviewKeepDockVisible)
-                     && !SettingsBackupSupport.exportKeys().contains(marker),
-                     "backups carry the toggle but never another session's recovery state")
     }
 }

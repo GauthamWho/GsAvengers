@@ -1,23 +1,11 @@
 /* macOS Automation permission prompt. */
-"NSAppleEventsUsageDescription" = "G’s Mac verwendet Automation, um Dateien zu verschieben, Objekte in den Papierkorb zu legen, angeforderte Befehle zu öffnen und die Wiedergabe in deinen Medienapps zu steuern.";
+"NSAppleEventsUsageDescription" = "G’s Avengers bittet den Finder, die Dateien zu bewegen, die du ausschneidest und einsetzt.";
 
 /* macOS Screen & System Audio Recording permission prompt. */
-"NSAudioCaptureUsageDescription" = "G’s Mac nutzt den Ton jeder App, um ihre Lautstärke im Mixer zu regeln und den Ton des Mac in die Bildschirmaufnahmen aufzunehmen, die du startest. Nichts verlässt deinen Mac.";
-
-/* macOS Bluetooth permission prompt. */
-"NSBluetoothAlwaysUsageDescription" = "G’s Mac verwendet Bluetooth nur, um den Akkustand verbundener Peripheriegeräte zu lesen. Nichts verlässt deinen Mac.";
+"NSAudioCaptureUsageDescription" = "G’s Avengers nimmt den Ton des Mac in die Bildschirmaufnahmen auf, die du startest, nur wenn du es einschaltest. Nichts verlässt deinen Mac.";
 
 /* macOS Microphone permission prompt. */
-"NSMicrophoneUsageDescription" = "G’s Mac nimmt dein Mikrofon nur auf, wenn du es für eine Bildschirmaufnahme einschaltest. Der Ton bleibt auf deinem Mac, außer du erstellst einen temporären Link.";
+"NSMicrophoneUsageDescription" = "G’s Avengers nimmt dein Mikrofon nur auf, wenn du es für eine Bildschirmaufnahme einschaltest.";
 
-/* macOS Camera permission prompt. */
-"NSCameraUsageDescription" = "G’s Mac zeigt deine Kamera nur im Vorschaufenster, das du öffnest, damit du vor einem Anruf prüfen kannst, wie du aussiehst. Es wird nichts aufgezeichnet und nichts verlässt deinen Mac.";
-
-/* macOS Downloads folder permission prompt. */
-"NSDownloadsFolderUsageDescription" = "G’s Mac prüft lokale Metadaten in Downloads, um nur ausgewählte bestätigte WhatsApp-Dateien zu prüfen, zu organisieren oder in den Papierkorb zu verschieben. Aufräumen sucht außerdem nach vergessenen Bildschirmfotos, wenn du sie hier speicherst.";
-
-/* macOS user-selected organizer destination prompts. */
-"NSDesktopFolderUsageDescription" = "G’s Mac organisiert bestätigte WhatsApp-Downloads in einem Zielordner, den du ausdrücklich auswählst. Aufräumen sucht außerdem nach vergessenen Bildschirmfotos, wenn du sie hier speicherst.";
-"NSDocumentsFolderUsageDescription" = "G’s Mac organisiert bestätigte WhatsApp-Downloads in einem Zielordner, den du ausdrücklich auswählst. Aufräumen sucht außerdem nach vergessenen Bildschirmfotos, wenn du sie hier speicherst.";
-"NSNetworkVolumesUsageDescription" = "G’s Mac organisiert bestätigte WhatsApp-Downloads in einem Zielordner, den du ausdrücklich auswählst. Aufräumen sucht außerdem nach vergessenen Bildschirmfotos, wenn du sie hier speicherst.";
-"NSRemovableVolumesUsageDescription" = "G’s Mac organisiert bestätigte WhatsApp-Downloads in einem Zielordner, den du ausdrücklich auswählst. Aufräumen sucht außerdem nach vergessenen Bildschirmfotos, wenn du sie hier speicherst.";
+/* macOS Local Network permission prompt (Windows keyboard & mouse sharing). */
+"NSLocalNetworkUsageDescription" = "G’s Avengers findet deinen Windows-Laptop im WLAN zu Hause, damit eine Tastatur und eine Maus an beiden funktionieren.";

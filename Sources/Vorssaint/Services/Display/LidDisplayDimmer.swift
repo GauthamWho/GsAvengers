@@ -36,3 +36,32 @@ enum LidDisplayDimmer {
         return setBrightness(id, Float(value)) == 0
     }
 }
+
+/// The built-in panel's brightness has no public API; DisplayServices is
+/// resolved once at runtime, and a missing symbol only disables dimming.
+extension LidDisplayDimmer {
+    /// Whether the built-in display's lid is shut; nil when unknown.
+    static func lidClosed() -> Bool? {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+        guard service != 0 else { return nil }
+        defer { IOObjectRelease(service) }
+        return IORegistryEntryCreateCFProperty(service, "AppleClamshellState" as CFString,
+                                               kCFAllocatorDefault, 0)?.takeRetainedValue() as? Bool
+    }
+}
+
+enum BrightnessBridge {
+    typealias GetBrightnessFn = @convention(c) (UInt32, UnsafeMutablePointer<Float>) -> Int32
+    typealias SetBrightnessFn = @convention(c) (UInt32, Float) -> Int32
+
+    private static let handle = dlopen(
+        "/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY)
+
+    static let getBrightness: GetBrightnessFn? = symbol("DisplayServicesGetBrightness")
+    static let setBrightness: SetBrightnessFn? = symbol("DisplayServicesSetBrightness")
+
+    private static func symbol<T>(_ name: String) -> T? {
+        guard let handle, let pointer = dlsym(handle, name) else { return nil }
+        return unsafeBitCast(pointer, to: T.self)
+    }
+}

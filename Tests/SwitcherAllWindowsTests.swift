@@ -186,8 +186,6 @@ enum SwitcherAllWindowsTests {
         }
         suite.expect(!GlobalShortcutRole.availableRoles(isAvailable: { $0 != .switcher }).contains(role),
                      "uninstalling the switcher also removes the new shortcut")
-        suite.expect(SettingsBackupSupport.exportKeys().isSuperset(of: [role.storageKey, DefaultsKey.switcherAllWindowsShortcutEnabled]),
-                     "the shortcut and opt-in travel in settings backups")
         let english = FeatureStrings.switcherShortcuts(.enUS)
         for language in AppLanguage.allCases {
             let text = FeatureStrings.switcherShortcuts(language)
