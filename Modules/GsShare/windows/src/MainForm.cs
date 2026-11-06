@@ -10,7 +10,9 @@ using System.Drawing.Text;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
+using Timer = System.Windows.Forms.Timer;
 
 namespace GsAvengers
 {
@@ -110,12 +112,11 @@ namespace GsAvengers
         Host host;
         readonly NotifyIcon tray;
         readonly Icon appIcon;
-        readonly Bitmap logo;
+        Bitmap logo;               // made on first paint, dropped while hidden
         bool reallyQuit, ignoreClip;
         int lastClipHash;
 
         // UI state
-        string statusText = "Looking for your Mac…";
         string pairCode;           // null = no pairing card
         string pairName = "";
         bool pairWaiting;
@@ -125,10 +126,11 @@ namespace GsAvengers
         readonly List<Hit> hits = new List<Hit>();
         string hoverId, pressId;
 
-        // animation
+        // animation: the timer only runs while a spring is still moving (or the connect ripple plays); it is
+        // started by a repaint that finds something in motion and stops itself once everything has settled.
+        // Nothing animates on its own: no drifting backdrop, no endless pulse. Hidden / minimised = no timer at all.
         readonly Timer anim = new Timer();
         DateTime lastTick = DateTime.UtcNow;
-        float t;                                  // seconds since start (pulse, flow)
         readonly Dictionary<string, Spring> springs = new Dictionary<string, Spring>();
         readonly Spring pairIn = new Spring(0, 170, 22);
         readonly Spring macX = new Spring(0, 260, 24), macY = new Spring(0, 260, 24), lift = new Spring(0, 300, 22);
@@ -140,7 +142,6 @@ namespace GsAvengers
             this.cfg = cfg;
             link = new Link(cfg, Environment.MachineName);
             try { appIcon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { appIcon = SystemIcons.Application; }
-            try { logo = new Icon(appIcon, 256, 256).ToBitmap(); } catch { logo = appIcon.ToBitmap(); }
             s = 1f; try { using (var g0 = Graphics.FromHwnd(IntPtr.Zero)) s = g0.DpiX / 96f; } catch { } // no window handle yet
 
             Text = "G's Avengers"; if (!PreviewMode) Icon = appIcon;
@@ -167,7 +168,8 @@ namespace GsAvengers
             anim.Tick += (o, e) => Tick();
 
             if (!showOnStart) { WindowState = FormWindowState.Minimized; ShowInTaskbar = false; Load += (o, e) => Hide(); }
-            VisibleChanged += (o, e) => { anim.Enabled = Visible; };
+            VisibleChanged += (o, e) => ShownChanged();
+            Resize += (o, e) => { bool m = WindowState == FormWindowState.Minimized; if (m != wasMinimized) { wasMinimized = m; ShownChanged(); } };
             WireLink();
         }
 
@@ -177,10 +179,9 @@ namespace GsAvengers
         /// Draws the window into a PNG with sample data (design check; no hooks, no network).
         public void RenderPreview(string path, bool pairing)
         {
-            hasPeer = true; peerName = "Gautham's MacBook Air"; side = 0;
+            hasPeer = true; peerName = "Gautham's MacBook Air"; side = 0; startWin = true;
             var q = SidePos(0); macX.Value = macX.Target = q.X; macY.Value = macY.Target = q.Y;
             if (pairing) { pairCode = "482913"; pairName = "Gautham's MacBook Air"; pairIn.Value = pairIn.Target = 1; }
-            t = 3;
             using (var bmp = new Bitmap(ClientSize.Width, S(900)))
             using (var g = Graphics.FromImage(bmp))
             {
@@ -204,10 +205,9 @@ namespace GsAvengers
             catch { }
             AddClipboardFormatListener(Handle);
             host = new Host(link, this);
-            host.OnRemoteChanged = r => UI(() => { Invalidate(); });
+            host.OnRemoteChanged = r => UI(Invalidate);
             host.Install();
             link.Start();
-            anim.Start();
         }
 
         // ---------- animation ----------
@@ -220,13 +220,112 @@ namespace GsAvengers
 
         void Tick()
         {
+            if (!OnScreen) { anim.Stop(); return; }
             var now = DateTime.UtcNow;
             float dt = (float)Math.Min(0.05, (now - lastTick).TotalSeconds);
-            lastTick = now; t += dt;
-            foreach (var kv in springs) kv.Value.Step(dt);
-            pairIn.Step(dt); macX.Step(dt); macY.Step(dt); lift.Step(dt);
-            if (ripple >= 0) { ripple += dt / 0.9f; if (ripple > 1) ripple = -1; }
-            Invalidate();
+            lastTick = now;
+            bool moving = false;
+            foreach (var kv in springs) moving |= kv.Value.Step(dt);
+            moving |= pairIn.Step(dt); moving |= macX.Step(dt); moving |= macY.Step(dt); moving |= lift.Step(dt);
+            if (ripple >= 0) { ripple += dt / 0.9f; if (ripple > 1) ripple = -1; moving = true; }
+            Invalidate();                       // one more frame lands everything exactly on target
+            if (!moving) anim.Stop();
+        }
+
+        bool OnScreen { get { return Visible && WindowState != FormWindowState.Minimized; } }
+
+        static bool Settled(Spring sp) { return sp.Value == sp.Target && sp.Vel == 0; }
+
+        /// called at the end of every paint: run the frame timer only if something is still in motion
+        void KickIfMoving()
+        {
+            if (PreviewMode || anim.Enabled || !OnScreen) return;
+            bool moving = ripple >= 0 || !Settled(pairIn) || !Settled(macX) || !Settled(macY) || !Settled(lift);
+            if (!moving) foreach (var kv in springs) if (!Settled(kv.Value)) { moving = true; break; }
+            if (moving) { lastTick = DateTime.UtcNow; anim.Start(); }
+        }
+
+        // ---------- hidden = light: no timer, no paint caches, small working set ----------
+
+        [DllImport("kernel32.dll")] static extern bool SetProcessWorkingSetSize(IntPtr proc, IntPtr min, IntPtr max);
+        [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+        bool wasMinimized, trimmed;
+
+        void ShownChanged()
+        {
+            if (OnScreen)
+            {
+                trimmed = false;
+                startWin = Installer.StartsWithWindows();   // registry read once per show, not once per paint
+                Invalidate();
+                return;
+            }
+            anim.Stop();
+            ReleasePaintCache();
+            if (!trimmed && !PreviewMode) { trimmed = true; UI(TrimMemory); }
+        }
+
+        void ReleasePaintCache()
+        {
+            foreach (var f in fonts.Values) f.Dispose();
+            fonts.Clear();
+            if (bg != null) { bg.Dispose(); bg = null; }
+            if (logo != null) { logo.Dispose(); logo = null; }
+            hits.Clear();
+        }
+
+        /// once after hiding: give the freed managed memory and the idle pages back to Windows
+        void TrimMemory()
+        {
+            if (OnScreen) return;
+            try
+            {
+                GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+                SetProcessWorkingSetSize(GetCurrentProcess(), (IntPtr)(-1), (IntPtr)(-1));
+            }
+            catch (Exception e) { Log.Write("trim: " + e.Message); }
+        }
+
+        // ---------- paint caches (rebuilt lazily on the next paint after a hide) ----------
+
+        readonly Dictionary<string, Font> fonts = new Dictionary<string, Font>();
+        Bitmap bg;                  // gradient + soft light, drawn once per window size
+        bool startWin;
+        readonly StringFormat Centered = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        readonly StringFormat CenteredNoWrap = new StringFormat { Alignment = StringAlignment.Center, FormatFlags = StringFormatFlags.NoWrap };
+
+        Font Fnt(string family, float size) { return Fnt(family, size, FontStyle.Regular); }
+        Font Fnt(string family, float size, FontStyle style)
+        {
+            string key = family + "|" + size.ToString(System.Globalization.CultureInfo.InvariantCulture) + "|" + (int)style;
+            Font f;
+            if (!fonts.TryGetValue(key, out f)) { f = new Font(family, size, style); fonts[key] = f; }
+            return f;
+        }
+
+        Bitmap Logo()
+        {
+            if (logo == null)
+            {
+                try { using (var ic = new Icon(appIcon, 256, 256)) logo = ic.ToBitmap(); } catch { logo = appIcon.ToBitmap(); }
+            }
+            return logo;
+        }
+
+        Bitmap Background(int w, int h)
+        {
+            if (bg != null && bg.Width == w && bg.Height == h) return bg;
+            if (bg != null) bg.Dispose();
+            bg = new Bitmap(Math.Max(1, w), Math.Max(1, h), PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(bg))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                var rc = new Rectangle(0, 0, w, h);
+                using (var b = new LinearGradientBrush(rc, Theme.BgTop, Theme.BgBottom, 90f)) g.FillRectangle(b, rc);
+                Blob(g, w * 0.25f, F(130), F(300), Theme.Peach, 150);       // still light: placed once, never drifts
+                Blob(g, w * 0.89f, F(452), F(340), Theme.Sky, 150);
+            }
+            return bg;
         }
 
         // ---------- layout + paint ----------
@@ -261,20 +360,17 @@ namespace GsAvengers
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             hits.Clear();
-            float W = ClientSize.Width;
 
-            // background: soft gradient + drifting peach/sky light
-            using (var b = new LinearGradientBrush(ClientRectangle, Theme.BgTop, Theme.BgBottom, 90f)) g.FillRectangle(b, ClientRectangle);
-            Blob(g, W * (0.25f + 0.12f * (float)Math.Sin(t * 0.11)), F(90) + F(40) * (float)Math.Cos(t * 0.08), F(300), Theme.Peach, 150);
-            Blob(g, W * (0.8f + 0.1f * (float)Math.Sin(t * 0.09 + 2)), F(420) + F(60) * (float)Math.Cos(t * 0.07 + 1), F(340), Theme.Sky, 150);
+            // background: soft gradient + peach/sky light, cached as one bitmap
+            g.DrawImageUnscaled(Background(ClientSize.Width, ClientSize.Height), 0, 0);
 
             g.ScaleTransform(s, s);
             float y = 24;
 
             // header
-            g.DrawImage(logo, new RectangleF(20, y, 48, 48));
-            using (var f = new Font("Segoe UI Semibold", 17f, GraphicsUnit.Point)) using (var b = new SolidBrush(Theme.Text)) g.DrawString("G's Avengers", f, b, 80, y + 1);
-            using (var f = new Font("Segoe UI", 9.5f)) using (var b = new SolidBrush(Theme.Muted)) g.DrawString("One keyboard and mouse, two computers", f, b, 82, y + 30);
+            g.DrawImage(Logo(), new RectangleF(20, y, 48, 48));
+            using (var b = new SolidBrush(Theme.Text)) g.DrawString("G's Avengers", Fnt("Segoe UI Semibold", 17f), b, 80, y + 1);
+            using (var b = new SolidBrush(Theme.Muted)) g.DrawString("One keyboard and mouse, two computers", Fnt("Segoe UI", 9.5f), b, 82, y + 30);
             Pill(g, 500, y + 12);
             y += 72;
 
@@ -290,7 +386,7 @@ namespace GsAvengers
                 g.SetClip(new RectangleF(0, y - 30, 520, h + 30));
                 Theme.GlassCard(g, r, 22);
                 Label(g, "PAIR WITH " + pairName.ToUpperInvariant(), 38, y + 18);
-                using (var f = new Font("Segoe UI", 10f)) using (var b = new SolidBrush(Theme.Text)) g.DrawString("Check the same number shows on the Mac.", f, b, 36, y + 38);
+                using (var b = new SolidBrush(Theme.Text)) g.DrawString("Check the same number shows on the Mac.", Fnt("Segoe UI", 10f), b, 36, y + 38);
                 string code = pairCode ?? "000000";
                 for (int i = 0; i < 6; i++)
                 {
@@ -303,18 +399,15 @@ namespace GsAvengers
                         using (var b = new SolidBrush(Color.FromArgb((int)(220 * di), 255, 255, 255))) g.FillPath(b, p);
                         using (var pen = new Pen(Color.FromArgb((int)(255 * di), 255, 255, 255))) g.DrawPath(pen, p);
                     }
-                    using (var f = new Font("Segoe UI Semibold", 21f)) using (var b = new SolidBrush(Color.FromArgb((int)(255 * di), Theme.Text)))
-                    {
-                        var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-                        g.DrawString(code[i].ToString(), f, b, tr, sf);
-                    }
+                    using (var b = new SolidBrush(Color.FromArgb((int)(255 * di), Theme.Text)))
+                        g.DrawString(code[i].ToString(), Fnt("Segoe UI Semibold", 21f), b, tr, Centered);
                     g.Restore(ds);
                 }
                 if (pairWaiting)
                 {
-                    using (var f = new Font("Segoe UI", 9.5f)) using (var b = new SolidBrush(Theme.Muted)) g.DrawString("Waiting for you to press Pair on the Mac…", f, b, 38, y + 146);
+                    using (var b = new SolidBrush(Theme.Muted)) g.DrawString("Waiting for you to press Pair on the Mac…", Fnt("Segoe UI", 9.5f), b, 38, y + 146);
                 }
-                else Button(g, "pair", "Numbers match — Pair", new RectangleF(38, y + 136, 190, 40), true, () => { link.ConfirmPair(); pairWaiting = true; });
+                else Button(g, "pair", "Numbers match — Pair", new RectangleF(38, y + 136, 190, 40), true, () => { link.ConfirmPair(); pairWaiting = true; Invalidate(); });
                 g.Restore(cs);
                 g.Restore(st);
                 y += h;
@@ -325,8 +418,8 @@ namespace GsAvengers
                 var r = new RectangleF(20, y, 480, 330);
                 Theme.GlassCard(g, r, 22);
                 Label(g, "SCREEN LAYOUT", 38, y + 18);
-                using (var f = new Font("Segoe UI", 10f)) using (var b = new SolidBrush(Theme.Text))
-                    g.DrawString(hasPeer ? "Drag the Mac to where it sits on your desk." : "Your Mac appears here once it connects.", f, b, 36, y + 38);
+                using (var b = new SolidBrush(Theme.Text))
+                    g.DrawString(hasPeer ? "Drag the Mac to where it sits on your desk." : "Your Mac appears here once it connects.", Fnt("Segoe UI", 10f), b, 36, y + 38);
                 stageRect = new RectangleF(36, y + 66, 448, 248);
                 using (var p = Theme.Round(stageRect, 16))
                 {
@@ -346,19 +439,19 @@ namespace GsAvengers
                 Theme.GlassCard(g, r, 22);
                 Label(g, "OPTIONS", 38, y + 18);
                 Toggle(g, "clip", "Share the clipboard (text and pictures)", y + 44, cfg.ShareClipboard, () => { cfg.ShareClipboard = !cfg.ShareClipboard; cfg.Save(); });
-                bool sw = Installer.StartsWithWindows();
-                Toggle(g, "start", "Start with Windows", y + 84, sw, () => Installer.SetStartWithWindows(!sw));
+                Toggle(g, "start", "Start with Windows", y + 84, startWin, () => { Installer.SetStartWithWindows(!startWin); startWin = Installer.StartsWithWindows(); });
                 y += 148;
             }
 
-            using (var f = new Font("Segoe UI", 8.5f)) using (var b = new SolidBrush(Theme.Muted))
-                g.DrawString("Push the pointer off the screen edge to move to the Mac; push it back to return. Ctrl+Alt+Esc always brings it home.", f, b, new RectangleF(24, y, 400, 44));
+            using (var b = new SolidBrush(Theme.Muted))
+                g.DrawString("Push the pointer off the screen edge to move to the Mac; push it back to return. Ctrl+Alt+Esc always brings it home.", Fnt("Segoe UI", 8.5f), b, new RectangleF(24, y, 400, 44));
             LinkText(g, "uninstall", "Uninstall", 470, y + 2, Uninstall);
             y += 52;
 
             int want = S(y);
             lastHeight = want;
             if (!PreviewMode && Math.Abs(ClientSize.Height - want) > 1) Later(() => ClientSize = new Size(S(520), want));
+            KickIfMoving();
         }
 
         void Blob(Graphics g, float cx, float cy, float rad, Color c, int alpha)
@@ -372,7 +465,8 @@ namespace GsAvengers
 
         void Label(Graphics g, string text, float x, float y)
         {
-            using (var f = new Font("Segoe UI Semibold", 7.6f)) using (var b = new SolidBrush(Theme.Muted))
+            var f = Fnt("Segoe UI Semibold", 7.6f);
+            using (var b = new SolidBrush(Theme.Muted))
             {
                 // letter-spaced caps
                 float cx = x;
@@ -384,7 +478,7 @@ namespace GsAvengers
         {
             bool on = link.Trusted;
             string txt = on ? (host != null && host.Remote ? "On the Mac" : "Connected") : "Searching";
-            using (var f = new Font("Segoe UI Semibold", 9f))
+            var f = Fnt("Segoe UI Semibold", 9f);
             {
                 float w = g.MeasureString(txt, f).Width + 34;
                 var r = new RectangleF(right - w, y, w, 26);
@@ -399,7 +493,7 @@ namespace GsAvengers
                     using (var p = Theme.Round(rr, rr.Height / 2)) using (var pen = new Pen(Color.FromArgb((int)(150 * (1 - k)), Theme.Ok), 1.5f)) g.DrawPath(pen, p);
                 }
                 Color c = on ? Theme.Ok : Theme.Accent;
-                float pulse = (t % 1.6f) / 1.6f;
+                const float pulse = 0.35f;   // a still halo while searching (an endless pulse kept the window repainting)
                 if (!on) using (var b = new SolidBrush(Color.FromArgb((int)(110 * (1 - pulse)), c))) { float d = 8 + 10 * pulse; g.FillEllipse(b, r.X + 15 - d / 2, r.Y + 13 - d / 2, d, d); }
                 using (var b = new SolidBrush(c)) g.FillEllipse(b, r.X + 11, r.Y + 9, 8, 8);
                 using (var b = new SolidBrush(Theme.Text)) g.DrawString(txt, f, b, r.X + 24, r.Y + 4);
@@ -422,14 +516,14 @@ namespace GsAvengers
                 }
             }
             else using (var p = Theme.Round(rr, rr.Height / 2)) using (var b = new SolidBrush(Color.FromArgb((int)(16 + 12 * hov.Value), Theme.Text))) g.FillPath(b, p);
-            using (var f = new Font("Segoe UI Semibold", 9.5f)) using (var b = new SolidBrush(prominent ? Color.White : Theme.Text))
-                g.DrawString(text, f, b, rr, new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center });
+            using (var b = new SolidBrush(prominent ? Color.White : Theme.Text))
+                g.DrawString(text, Fnt("Segoe UI Semibold", 9.5f), b, rr, Centered);
             hits.Add(new Hit(r, id, click));
         }
 
         void Toggle(Graphics g, string id, string label, float y, bool on, Action click)
         {
-            using (var f = new Font("Segoe UI", 10f)) using (var b = new SolidBrush(Theme.Text)) g.DrawString(label, f, b, 36, y + 3);
+            using (var b = new SolidBrush(Theme.Text)) g.DrawString(label, Fnt("Segoe UI", 10f), b, 36, y + 3);
             var k = Sp(id + ".k", 380, 20); k.Target = on ? 1 : 0;
             if (!initDone.Contains(id)) { k.Value = k.Target = on ? 1 : 0; initDone.Add(id); }
             var hov = Sp(id + ".h", 320, 20); hov.Target = hoverId == id ? 1 : 0;
@@ -453,7 +547,8 @@ namespace GsAvengers
 
         void LinkText(Graphics g, string id, string text, float x, float y, Action click)
         {
-            using (var f = new Font("Segoe UI", 8.5f, hoverId == id ? FontStyle.Underline : FontStyle.Regular)) using (var b = new SolidBrush(hoverId == id ? Theme.Accent : Theme.Muted))
+            var f = Fnt("Segoe UI", 8.5f, hoverId == id ? FontStyle.Underline : FontStyle.Regular);
+            using (var b = new SolidBrush(hoverId == id ? Theme.Accent : Theme.Muted))
             {
                 var sz = g.MeasureString(text, f);
                 g.DrawString(text, f, b, x - sz.Width / 2, y);
@@ -508,9 +603,10 @@ namespace GsAvengers
                 if (accent) using (var b = Theme.AccentBrush(r)) using (var pen = new Pen(b, 1.5f)) g.DrawPath(pen, p);
                 else using (var pen = new Pen(Color.FromArgb(36, Theme.Text))) g.DrawPath(pen, p);
             }
-            var sf = new StringFormat { Alignment = StringAlignment.Center, FormatFlags = StringFormatFlags.NoWrap };
-            using (var f = new Font("Segoe UI Semibold", 9.5f)) using (var b = new SolidBrush(Theme.Text)) g.DrawString(Fit(g, title, f, r.Width - 14), f, b, new RectangleF(r.X + 6, r.Y + r.Height / 2 - 14, r.Width - 12, 18), sf);
-            using (var f = new Font("Segoe UI", 8f)) using (var b = new SolidBrush(Theme.Muted)) g.DrawString(Fit(g, sub, f, r.Width - 14), f, b, new RectangleF(r.X + 6, r.Y + r.Height / 2 + 5, r.Width - 12, 16), sf);
+            var sf = CenteredNoWrap;
+            var ft = Fnt("Segoe UI Semibold", 9.5f); var fs = Fnt("Segoe UI", 8f);
+            using (var b = new SolidBrush(Theme.Text)) g.DrawString(Fit(g, title, ft, r.Width - 14), ft, b, new RectangleF(r.X + 6, r.Y + r.Height / 2 - 14, r.Width - 12, 18), sf);
+            using (var b = new SolidBrush(Theme.Muted)) g.DrawString(Fit(g, sub, fs, r.Width - 14), fs, b, new RectangleF(r.X + 6, r.Y + r.Height / 2 + 5, r.Width - 12, 16), sf);
         }
 
         /// shorten with "…" at the end so names never get cut on both sides
@@ -533,12 +629,14 @@ namespace GsAvengers
                 macX.Target = macX.Value = dragBase.X + (p.X - dragStart.X);
                 macY.Target = macY.Value = dragBase.Y + (p.Y - dragStart.Y);
                 macX.Vel = macY.Vel = 0;
+                Invalidate();
                 return;
             }
             string h = null;
             foreach (var hit in hits) if (hit.R.Contains(p)) h = hit.Id;
-            if (hasPeer && macRect.Contains(p)) { Cursor = Cursors.SizeAll; } else Cursor = h != null ? Cursors.Hand : Cursors.Default;
-            hoverId = h;
+            var want = hasPeer && macRect.Contains(p) ? Cursors.SizeAll : h != null ? Cursors.Hand : Cursors.Default;
+            if (Cursor != want) Cursor = want;
+            if (h != hoverId) { hoverId = h; Invalidate(); }
         }
 
         protected override void OnMouseDown(MouseEventArgs e)
@@ -547,9 +645,11 @@ namespace GsAvengers
             if (hasPeer && macRect.Contains(p))
             {
                 dragging = true; dragStart = p; dragBase = new PointF(macX.Value, macY.Value); lift.Target = 1;
+                Invalidate();
                 return;
             }
             foreach (var hit in hits) if (hit.R.Contains(p)) pressId = hit.Id;
+            if (pressId != null) Invalidate();
         }
 
         protected override void OnMouseUp(MouseEventArgs e)
@@ -561,13 +661,15 @@ namespace GsAvengers
                 int ns = NearestSide(new PointF(macX.Value, macY.Value));
                 var q = SidePos(ns); macX.Target = q.X; macY.Target = q.Y;
                 if (ns != side) SetSide(ns);
+                Invalidate();
                 return;
             }
             string id = pressId; pressId = null;
+            if (id != null) Invalidate();
             foreach (var hit in hits) if (hit.Id == id && hit.R.Contains(p) && hit.Click != null) { hit.Click(); break; }
         }
 
-        protected override void OnMouseLeave(EventArgs e) { hoverId = null; base.OnMouseLeave(e); }
+        protected override void OnMouseLeave(EventArgs e) { if (hoverId != null) { hoverId = null; Invalidate(); } base.OnMouseLeave(e); }
 
         // ---------- link ----------
 
@@ -576,12 +678,12 @@ namespace GsAvengers
 
         void WireLink()
         {
-            link.OnStatus = st => UI(() => { statusText = st; });
+            link.OnStatus = st => UI(Invalidate);   // the pill reflects the link state
             link.OnLog = st => Log.Write(st);
             link.OnPairCode = (code, name) => UI(() =>
             {
                 pairName = name; pairCode = code; pairWaiting = false; pairIn.Target = 1;
-                ShowMe();
+                ShowMe(); Invalidate();
             });
             link.OnConnected = (id, name) => UI(() =>
             {
@@ -592,8 +694,9 @@ namespace GsAvengers
                 ripple = 0;
                 link.Send(Msg.Layout, new byte[] { (byte)sd }); // payload = where the receiver (Mac) sits relative to us
                 tray.Text = "G's Avengers — connected to " + (name.Length > 30 ? name.Substring(0, 30) : name);
+                Invalidate();
             });
-            link.OnDisconnected = () => UI(() => { if (host != null) host.GoLocal(-1); tray.Text = "G's Avengers — looking for your Mac"; });
+            link.OnDisconnected = () => UI(() => { if (host != null) host.GoLocal(-1); tray.Text = "G's Avengers — looking for your Mac"; Invalidate(); });
             link.OnMessage = (tp, a) =>
             {
                 switch (tp)
@@ -612,6 +715,7 @@ namespace GsAvengers
                         {
                             cfg.PeerSide[link.PeerId] = macSide; cfg.Save(); host.PeerSide = macSide; side = macSide;
                             var q = SidePos(macSide); macX.Target = q.X; macY.Target = q.Y;
+                            Invalidate();
                         });
                         break;
                     case Msg.ClipText:
@@ -655,7 +759,7 @@ namespace GsAvengers
             ignoreClip = true;
             for (int i = 0; i < 5; i++)
             {
-                try { set(); break; } catch (ExternalException) { System.Threading.Thread.Sleep(60); }
+                try { set(); break; } catch (ExternalException) { Thread.Sleep(60); }
             }
             lastClipHash = hash;
             var tm = new Timer { Interval = 300 }; tm.Tick += (o, e) => { ignoreClip = false; tm.Dispose(); }; tm.Start();

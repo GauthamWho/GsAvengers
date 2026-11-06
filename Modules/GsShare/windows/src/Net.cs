@@ -98,13 +98,15 @@ namespace GsAvengers
         public string PeerId = "", PeerName = "";
 
         TcpClient tcp;
-        NetworkStream stream;
         SessionKeys keys;
         BlockingCollection<byte[]> outq;
         volatile bool connecting, connected;
         bool myPairOK, peerPairOK;
         DateTime lastHeard;
         readonly object stateLock = new object();
+        // set while there is no live link / while there is one: the discovery and keep-alive threads sleep on these
+        // instead of waking up on a timer
+        readonly ManualResetEvent downEvt = new ManualResetEvent(true), upEvt = new ManualResetEvent(false);
         UdpClient udp;
         public string FixedHost; // for tests: dial this address instead of using discovery
 
@@ -134,7 +136,15 @@ namespace GsAvengers
             return ms.ToArray();
         }
 
-        static List<IPAddress> BroadcastAddresses()
+        List<IPAddress> bcast; DateTime bcastAt;
+        /// the subnet broadcast addresses, re-read from the network cards at most every 30 s
+        List<IPAddress> BroadcastAddresses()
+        {
+            if (bcast == null || (DateTime.UtcNow - bcastAt).TotalSeconds > 30) { bcast = ReadBroadcastAddresses(); bcastAt = DateTime.UtcNow; }
+            return bcast;
+        }
+
+        static List<IPAddress> ReadBroadcastAddresses()
         {
             var r = new List<IPAddress> { IPAddress.Broadcast };
             try
@@ -169,13 +179,19 @@ namespace GsAvengers
                     DateTime last = DateTime.MinValue;
                     while (true)
                     {
-                        if (FixedHost != null) { if (!connected && !connecting) BeginConnect(FixedHost, TcpPort); Thread.Sleep(1000); continue; }
-                        if ((DateTime.UtcNow - last).TotalSeconds > 2 && !connected)
+                        // linked: nothing to discover, sleep until the link drops (no polling while connected)
+                        if (connected) { downEvt.WaitOne(); bcast = null; last = DateTime.MinValue; continue; }
+                        if (FixedHost != null) { if (!connecting) BeginConnect(FixedHost, TcpPort); downEvt.WaitOne(1000); continue; }
+                        double since = (DateTime.UtcNow - last).TotalMilliseconds;
+                        if (since >= 2000)
                         {
-                            last = DateTime.UtcNow;
+                            last = DateTime.UtcNow; since = 0;
                             byte[] p = Packet(2);
                             foreach (var b in BroadcastAddresses()) { try { udp.Send(p, p.Length, new IPEndPoint(b, UdpPort)); } catch { } }
                         }
+                        // wait for a packet, at most until the next probe is due (no exception-per-second timeouts)
+                        int waitMs = Math.Max(50, 2000 - (int)since);
+                        if (!udp.Client.Poll(waitMs * 1000, SelectMode.SelectRead)) continue;
                         IPEndPoint from = new IPEndPoint(IPAddress.Any, 0);
                         byte[] d;
                         try { d = udp.Receive(ref from); }
@@ -270,10 +286,11 @@ namespace GsAvengers
 
                 lock (stateLock)
                 {
-                    tcp = c; stream = s; keys = k; PeerId = peerId; PeerName = peerName;
+                    tcp = c; keys = k; PeerId = peerId; PeerName = peerName;
                     outq = new BlockingCollection<byte[]>(4096);
                     myPairOK = peerPairOK = false; Trusted = false; pairingShown = false;
                     connected = true; connecting = false; lastHeard = DateTime.UtcNow;
+                    downEvt.Reset(); upEvt.Set();
                 }
                 s.ReadTimeout = Timeout.Infinite;
                 var sender = new Thread(() => SendLoop(outq, s, k)); sender.IsBackground = true; sender.Start();
@@ -288,7 +305,11 @@ namespace GsAvengers
             finally
             {
                 bool was;
-                lock (stateLock) { was = connected; connected = false; connecting = false; Trusted = false; if (outq != null) outq.CompleteAdding(); }
+                lock (stateLock)
+                {
+                    was = connected; connected = false; connecting = false; Trusted = false; if (outq != null) outq.CompleteAdding();
+                    upEvt.Reset(); downEvt.Set();
+                }
                 try { if (c != null) c.Close(); } catch { }
                 if (was) { var d = OnDisconnected; if (d != null) d(); }
                 Status("Looking for your Mac…");
@@ -403,11 +424,13 @@ namespace GsAvengers
 
         void KeepAliveLoop()
         {
+            byte[] none = new byte[0];
             while (true)
             {
-                Thread.Sleep(1000);
+                upEvt.WaitOne();            // no link: sleep until there is one (no 1 s wake-ups while searching)
+                Thread.Sleep(1000);         // PING every 1 s is part of the protocol
                 if (!connected) continue;
-                Send(Msg.Ping, new byte[0]);
+                Send(Msg.Ping, none);
                 if ((DateTime.UtcNow - lastHeard).TotalSeconds > 5) { Log("timeout"); Disconnect(); }
             }
         }
