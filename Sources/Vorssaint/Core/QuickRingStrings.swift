@@ -29,7 +29,7 @@ extension FeatureStrings {
             triggersCaption: "Try each way of opening it and keep the ones you like. Esc, a click outside or moving away closes it; 1–4 pick an action.",
             controlDoubleTap: "Double-tap ⌃ Control",
             tryIt: "Show the ring",
-            capture: "Capture", record: "Record", stop: "Stop", clipboard: "Clipboard", windows: "Windows")
+            capture: "Screenshot", record: "Record", stop: "Stop", clipboard: "Clipboard", windows: "Windows")
         case .ptBR: return QuickRingStrings(
             title: "Anel rápido",
             hubDescription: "Um anel de ações rápidas que abre em volta do ponteiro do mouse.",

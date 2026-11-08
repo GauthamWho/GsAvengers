@@ -77,15 +77,15 @@ enum QuickRingSupport {
 /// The ring's size in points. The panel is a margin wider than the ring so
 /// its soft shadow fades out instead of being cut square.
 enum QuickRingLayout {
-    static let itemDiameter: CGFloat = 52
-    /// Centre of the ring to the centre of each button: four 52 pt buttons
-    /// round a 70 pt radius, whose inner edges meet the clear hole.
-    static let itemRadius: CGFloat = 70
-    /// The glass ring's outer edge, a few points past the buttons.
+    static let itemDiameter: CGFloat = 60
+    /// Centre of the ring to the centre of each wedge's icon-and-name, midway
+    /// between the hole and the outer edge so the label sits in the band.
+    static let itemRadius: CGFloat = 88
+    /// The ring's outer edge, a few points past the label band.
     static let outerRadius: CGFloat = itemRadius + itemDiameter / 2 + 6
     /// The clear hole in the middle, where the pointer rests and nothing is
     /// picked (it is also the dead zone for pointing).
-    static let innerRadius: CGFloat = 44
+    static let innerRadius: CGFloat = 52
     /// Room round the ring for the glass's own shadow.
     static let shadowMargin: CGFloat = 26
     static let panelSize: CGFloat = (outerRadius + shadowMargin) * 2

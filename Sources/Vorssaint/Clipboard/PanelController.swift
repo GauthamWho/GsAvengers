@@ -108,7 +108,10 @@ final class PanelController {
     func show(at anchor: PanelAnchor) {
         position(anchor)
         onShow?()
-        NSApp.activate(ignoringOtherApps: true)
+        // No NSApp.activate: it lifts every window we own (the settings window
+        // pops up next to the panel) and on macOS 26 it does not even make the
+        // panel key. The panel is a .nonactivatingPanel — it takes key focus on
+        // its own, leaving the settings window wherever it was.
         panel.alphaValue = 1
         panel.makeKeyAndOrderFront(nil)
         panel.invalidateShadow()

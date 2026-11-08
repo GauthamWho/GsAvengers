@@ -363,6 +363,10 @@ final class QuickRingService: ObservableObject {
         host.sizingOptions = []
         host.frame = NSRect(x: 0, y: 0, width: size, height: size)
         host.wantsLayer = true
+        // Never let the hosting layer paint a plate of its own: the ring is
+        // the only thing this window should ever show.
+        host.layer?.backgroundColor = NSColor.clear.cgColor
+        host.layer?.isOpaque = false
         panel.contentView = host
         self.panel = panel
         return panel
@@ -374,6 +378,10 @@ final class QuickRingService: ObservableObject {
     /// at once.
     private static func present(_ panel: NSPanel) {
         panel.ignoresMouseEvents = false
+        // Re-asserted at every showing: a system shadow behind a clear panel
+        // reads as a grey box around the ring.
+        panel.hasShadow = false
+        panel.invalidateShadow()
         let animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         panel.alphaValue = animates ? 0 : 1
         panel.orderFrontRegardless()

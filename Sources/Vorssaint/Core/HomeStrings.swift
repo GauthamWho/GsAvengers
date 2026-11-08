@@ -27,7 +27,7 @@ extension FeatureStrings {
         switch language {
         case .enUS: return HomeStrings(
             groupWindows: "Windows habits", groupSharing: "Sharing & clipboard",
-            groupCapture: "Capture", groupPower: "Power",
+            groupCapture: "Screenshot & record", groupPower: "Power",
             dockPreview: "Window previews over the Dock", sharing: "Windows keyboard & mouse",
             urlCleaner: "Clean tracking from copied links", screenOCR: "Copy text from the screen",
             keepAwake: "Keep the Mac awake", keepAwakeNow: "Keep awake now",
